@@ -1,42 +1,46 @@
 "use client";
 import { useRouter } from "next/navigation";
 import styles from './page.module.css';
+import { useEffect, useState } from 'react';
+import Link from "next/link";
+
+interface Case {
+  case_id: number;
+  title: string;
+  description: string;
+  file_name: string;
+  file_path: string;
+  file_hash: {
+    type: string;
+    data: number[];
+  };
+  file_size: string;
+  is_public: boolean;
+  uploader_id: number;
+  uploaded_at: string;
+  updated_at: string;
+}
 
 export default function Home() {
   const router = useRouter();
+  const [cases, setCases] = useState<Case[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const cases = [
-    {
-      id: 1,
-      title: "Healthcare Innovation",
-      description: "AI in Medical Diagnostics",
-      image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d"
-    },
-    {
-      id: 2,
-      title: "Ethical AI",
-      description: "Autonomous Decision Making",
-      image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e"
-    },
-    {
-      id: 3,
-      title: "Sustainable Future",
-      description: "Green Tech Revolution",
-      image: "https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9"
-    },
-    {
-      id: 4,
-      title: "Digital Transformation",
-      description: "Enterprise Evolution",
-      image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa"
-    },
-    {
-      id: 5,
-      title: "Generate Custom Case",
-      description: "Create Your Own Scenario",
-      image: "https://images.unsplash.com/photo-1518729371765-4b87f844b1d6"
-    }
-  ];
+  useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        const response = await fetch('/api/cases');
+        const data = await response.json();
+        setCases(data);
+      } catch (error) {
+        console.error('Error fetching cases:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCases();
+  }, []);
 
   return (
     <div className={styles.container}>
@@ -46,6 +50,7 @@ export default function Home() {
           CaseAI
         </div>
         <div className={styles.navRight}>
+        <Link href="/test" className={styles.testLink}>Test API</Link>
           <a href="#account">Account</a>
         </div>
       </nav>
@@ -58,21 +63,29 @@ export default function Home() {
           
           <div className={styles.heroCardsSection}>
             <div className={styles.heroCards}>
-              {cases.map((caseItem) => (
-                <div key={caseItem.id} className={styles.heroCardGroup}>
-                  <div
-                    onClick={() => router.push(`/case/${caseItem.id}`)}
-                    className={styles.heroCard}
-                  >
-                    <div 
-                      className={styles.heroCardImage}
-                      style={{ backgroundImage: `url(${caseItem.image})` }}
-                    />
+              {loading ? (
+                <div className={styles.loading}>Loading cases...</div>
+              ) : (
+                cases.map((caseItem) => (
+                  <div key={caseItem.case_id} className={styles.heroCardGroup}>
+                    <div
+                      onClick={() => router.push(`/case/${caseItem.case_id}`)}
+                      className={styles.heroCard}
+                    >
+                      <div 
+                        className={styles.heroCardImage}
+                        style={{ 
+                          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7))` 
+                        }}
+                      />
+                      <div className={styles.heroCardContent}>
+                        <h3 className={styles.heroCardTitle}>{caseItem.title}</h3>
+                        <p className={styles.heroCardDescription}>{caseItem.description}</p>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className={styles.heroCardTitle}>{caseItem.title}</h3>
-                  <p className={styles.heroCardDescription}>{caseItem.description}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
