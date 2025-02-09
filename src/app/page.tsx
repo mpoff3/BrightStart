@@ -29,6 +29,12 @@ export default function Home() {
       title: "Digital Transformation",
       description: "Enterprise Evolution",
       image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa"
+    },
+    {
+      id: 5,
+      title: "Generate Custom Case",
+      description: "Create Your Own Scenario",
+      image: "https://images.unsplash.com/photo-1518729371765-4b87f844b1d6"
     }
   ];
 
