@@ -2,7 +2,6 @@
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Image from 'next/image';
-import Image from 'next/image';
 
 // Helper function to generate more contextual responses
 const generateStakeholderResponse = (role: string, userInput: string) => {
@@ -453,16 +452,20 @@ setInitialLoad(false);
 return (
 <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-blue-50">
 <style>{styles}</style>
-{/* Hero section with blue gradient text */}
+{/* Hero section with blue gradient text - centered with respect to input box */}
 <div className="w-full h-[30vh] flex flex-col items-center justify-center text-center px-8 mb-8">
-<h1 className="text-5xl font-light tracking-tight mb-4 bg-clip-text text-transparent 
-bg-gradient-to-r from-[#4285f4] via-[#1a73e8] to-[#0d47a1]">
-Healthcare Innovation
-</h1>
-<div className="text-3xl font-light bg-clip-text text-transparent 
-bg-gradient-to-r from-[#1a73e8] via-[#1557b0] to-[#4285f4]">
-AI-Powered Diagnostics
-</div>
+  <div className="max-w-4xl mx-auto"> {/* Match width with input box max-w-4xl */}
+    <h1 className="text-5xl font-light tracking-tight mb-4 bg-clip-text text-transparent 
+                   bg-gradient-to-r from-[#4285f4] via-[#1a73e8] to-[#0d47a1]
+                   text-center">
+      Healthcare Innovation
+    </h1>
+    <div className="text-3xl font-light bg-clip-text text-transparent 
+                    bg-gradient-to-r from-[#1a73e8] via-[#1557b0] to-[#4285f4]
+                    text-center">
+      AI-Powered Diagnostics
+    </div>
+  </div>
 </div>
 
 {/* Main content with Google Material styling */}
