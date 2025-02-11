@@ -1,15 +1,24 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 
-// Create a pool instance
+// Create a single pool instance that's reused across requests
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  max: 20, // Limit maximum connections
+  idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
+  connectionTimeoutMillis: 2000 // Return an error after 2 seconds if connection could not be established
+});
+
+// Handle pool errors
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
 });
 
 export async function GET(request: Request) {
-  // Get the started_case_id from URL params
   const { searchParams } = new URL(request.url);
   const startedCaseId = searchParams.get('started_case_id');
+  const afterId = searchParams.get('after_id');
 
   if (!startedCaseId) {
     return NextResponse.json(
@@ -18,16 +27,25 @@ export async function GET(request: Request) {
     );
   }
 
-  // Get a client from the pool
-  const client = await pool.connect();
-
+  let client;
   try {
-    const result = await client.query(
-      `SELECT * FROM messages 
-       WHERE started_case_id = $1 
-       ORDER BY sent_at ASC`,
-      [startedCaseId]
-    );
+    // Get a client from the pool
+    client = await pool.connect();
+
+    let query = `
+      SELECT * FROM messages 
+      WHERE started_case_id = $1
+    `;
+    const params = [startedCaseId];
+
+    if (afterId) {
+      query += ` AND message_id > $2`;
+      params.push(afterId);
+    }
+
+    query += ` ORDER BY sent_at ASC`;
+
+    const result = await client.query(query, params);
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -37,17 +55,17 @@ export async function GET(request: Request) {
     );
   } finally {
     // Always release the client back to the pool
-    client.release();
+    if (client) client.release();
   }
 }
 
 export async function POST(request: Request) {
+  let client;
   try {
     let body;
     const contentType = request.headers.get('content-type');
 
     if (contentType?.includes('multipart/form-data')) {
-      // Handle form data
       const formData = await request.formData();
       body = {
         started_case_id: parseInt(formData.get('started_case_id') as string),
@@ -56,15 +74,11 @@ export async function POST(request: Request) {
         is_user_message: formData.get('is_user_message') === 'true'
       };
     } else {
-      // Handle JSON
       body = await request.json();
     }
 
-    console.log('Parsed message data:', body);
-
     const { started_case_id, persona_id, content, is_user_message } = body;
 
-    // Validate required fields
     if (!started_case_id || !content) {
       return NextResponse.json(
         { error: 'started_case_id and content are required' },
@@ -72,10 +86,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get a client from the pool
-    const client = await pool.connect();
+    client = await pool.connect();
 
-    const result = await client.query(
+    // Insert the user's message
+    const userResult = await client.query(
       `INSERT INTO messages 
         (started_case_id, persona_id, content, is_user_message, sent_at) 
        VALUES ($1, $2, $3, $4, NOW()) 
@@ -83,14 +97,36 @@ export async function POST(request: Request) {
       [started_case_id, persona_id, content, is_user_message]
     );
 
-    // Notify listeners about the new message
-    await client.query(
-      `NOTIFY new_messages_${started_case_id}, '${JSON.stringify({
-        message_id: result.rows[0].message_id,
-      })}'`
-    );
+    // Simulate AI responses for testing
+    const testResponses = [
+      "I understand your concern. Let me address that point by point.",
+      "That's an interesting perspective. Here's what I think about it.",
+      "I'd like to add some additional context to this discussion."
+    ];
 
-    return NextResponse.json(result.rows[0]);
+    // Insert AI responses with slight delays between them
+    const aiResponses = [];
+    for (let i = 0; i < testResponses.length; i++) {
+      // Add a small delay between insertions to simulate natural timing
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const aiResult = await client.query(
+        `INSERT INTO messages 
+          (started_case_id, persona_id, content, is_user_message, sent_at) 
+         VALUES ($1, $2, $3, false, NOW() + interval '${i + 1} seconds') 
+         RETURNING *`,
+        [started_case_id, persona_id, testResponses[i]]
+      );
+      
+      aiResponses.push(aiResult.rows[0]);
+    }
+
+    // Return both the user message and AI responses
+    return NextResponse.json({
+      userMessage: userResult.rows[0],
+      aiResponses: aiResponses
+    });
+
   } catch (error) {
     console.error('Error creating message:', error);
     return NextResponse.json(
@@ -100,5 +136,7 @@ export async function POST(request: Request) {
       },
       { status: 500 }
     );
+  } finally {
+    if (client) client.release();
   }
 } 

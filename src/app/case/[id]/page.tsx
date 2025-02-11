@@ -1,6 +1,6 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from 'next/image';
 
 interface Persona {
@@ -45,6 +45,10 @@ export default function CasePage() {
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [speakingPersonaId, setSpeakingPersonaId] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [lastMessageId, setLastMessageId] = useState<number>(0);
+  const [messageQueue, setMessageQueue] = useState<Message[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const queueProcessorRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,8 +74,8 @@ export default function CasePage() {
     fetchData();
   }, [params.id]);
 
-  // Function to play text-to-speech
-  const playTextToSpeech = async (text: string, personaId: number) => {
+  // Modified playTextToSpeech function to return a promise that resolves when audio finishes
+  const playTextToSpeech = async (text: string, personaId: number): Promise<void> => {
     try {
       const response = await fetch('/api/text-to-speech', {
         method: 'POST',
@@ -86,52 +90,150 @@ export default function CasePage() {
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
 
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.onplay = () => setSpeakingPersonaId(personaId);
-        audioRef.current.onended = () => {
-          setSpeakingPersonaId(null);
-          URL.revokeObjectURL(audioUrl);
-        };
-        await audioRef.current.play();
-      }
-      
+      return new Promise((resolve, reject) => {
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl;
+          audioRef.current.onplay = () => setSpeakingPersonaId(personaId);
+          audioRef.current.onended = () => {
+            setSpeakingPersonaId(null);
+            URL.revokeObjectURL(audioUrl);
+            resolve();
+          };
+          audioRef.current.onerror = (e) => {
+            URL.revokeObjectURL(audioUrl);
+            reject(e);
+          };
+          audioRef.current.play().catch(reject);
+        } else {
+          reject(new Error('Audio element not found'));
+        }
+      });
     } catch (error) {
       console.error('Error playing text-to-speech:', error);
       setSpeakingPersonaId(null);
+      throw error;
     }
   };
 
-  // Update useEffect to handle new messages
+  // Modified fetchNewMessages to properly queue messages
+  const fetchNewMessages = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/messages?started_case_id=${params.id}&after_id=${lastMessageId}`);
+      const newMessages = await response.json();
+      
+      if (newMessages.length > 0) {
+        setMessages(prev => [...prev, ...newMessages]);
+        setLastMessageId(newMessages[newMessages.length - 1].message_id);
+        
+        // Add non-user messages to the queue in order
+        const nonUserMessages = newMessages.filter(msg => !msg.is_user_message);
+        if (nonUserMessages.length > 0) {
+          setMessageQueue(prev => [...prev, ...nonUserMessages]);
+        }
+      }
+    } catch (error) {
+      console.error('Error polling messages:', error);
+    }
+  }, [params.id, lastMessageId]);
+
+  // Modified queue processor
   useEffect(() => {
-    const eventSource = new EventSource(`/api/messages/stream?started_case_id=${params.id}`);
-
-    eventSource.onmessage = async (event) => {
-      const message = JSON.parse(event.data);
-      setMessages(prev => [...prev, message]);
-
-      // Play text-to-speech for non-user messages
-      if (!message.is_user_message && message.persona_id) {
-        await playTextToSpeech(message.content, message.persona_id);
+    const processQueue = async () => {
+      if (messageQueue.length > 0 && !isPlaying) {
+        setIsPlaying(true);
+        const message = messageQueue[0];
+        
+        try {
+          await playTextToSpeech(message.content, message.persona_id);
+          setMessageQueue(prev => prev.slice(1)); // Remove the processed message
+        } catch (error) {
+          console.error('Error playing message:', error);
+        } finally {
+          setIsPlaying(false);
+        }
       }
     };
 
+    // Clear any existing interval
+    if (queueProcessorRef.current) {
+      clearInterval(queueProcessorRef.current);
+    }
+
+    // Set up a new interval to check the queue regularly
+    queueProcessorRef.current = setInterval(processQueue, 500);
+
+    // Cleanup
     return () => {
-      eventSource.close();
+      if (queueProcessorRef.current) {
+        clearInterval(queueProcessorRef.current);
+      }
     };
+  }, [messageQueue, isPlaying]);
+
+  // Initial messages fetch
+  useEffect(() => {
+    const fetchInitialMessages = async () => {
+      try {
+        const messagesResponse = await fetch(`/api/messages?started_case_id=${params.id}`);
+        const messagesData = await messagesResponse.json();
+        setMessages(messagesData);
+        
+        // Set the last message ID if there are messages
+        if (messagesData.length > 0) {
+          setLastMessageId(messagesData[messagesData.length - 1].message_id);
+        }
+      } catch (error) {
+        console.error('Error fetching initial messages:', error);
+      }
+    };
+
+    fetchInitialMessages();
   }, [params.id]);
 
+  // Set up polling with a longer interval
+  useEffect(() => {
+    const pollInterval = setInterval(fetchNewMessages, 3000); // Poll every 3 seconds
+    return () => clearInterval(pollInterval);
+  }, [fetchNewMessages]);
+
   const handleSubmit = async () => {
-    if (!currentInput.trim()) return;
+    if (!currentInput.trim() || !selectedPersona) return;
 
     const userMessage = {
+      started_case_id: parseInt(params.id as string),
+      persona_id: selectedPersona.persona_id,
       content: currentInput,
-      is_user_message: true,
-      sent_at: new Date().toISOString(),
+      is_user_message: true
     };
 
-    setMessages(prev => [...prev, userMessage as Message]);
-    setCurrentInput('');
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userMessage),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      const result = await response.json();
+      
+      // Add the user message to the UI immediately
+      setMessages(prev => [...prev, result.userMessage]);
+      
+      // Clear the input
+      setCurrentInput('');
+      
+      // The AI responses will be picked up by the polling mechanism
+      // and added to the message queue automatically
+      
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // You might want to show an error message to the user here
+    }
   };
 
   if (loading) {
