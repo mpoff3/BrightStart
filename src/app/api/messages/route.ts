@@ -1,31 +1,20 @@
 import { NextResponse } from 'next/server';
-import { getClient } from '@/lib/db';
+import { getClient } from '../../../lib/db';
 
 const client = getClient();
 
 export async function GET(request: Request) {
-  console.log('Received GET request for /api/messages');
-  
-  // Get started_case_id from URL parameters
-  const { searchParams } = new URL(request.url);
-  const started_case_id = searchParams.get('started_case_id');
-  
-  if (!started_case_id) {
-    return NextResponse.json({ error: 'started_case_id is required' }, { status: 400 });
-  }
-
-  try {
-    const result = await client.query(
-      `SELECT * FROM messages 
-       WHERE started_case_id = $1 
-       ORDER BY sent_at ASC`,
-      [started_case_id]
-    );
-    return NextResponse.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    return NextResponse.json({ error: 'Database query failed' }, { status: 500 });
-  }
+  // For now, return mock data until database is set up
+  return NextResponse.json([{
+    message_id: 1,
+    started_case_id: 1,
+    persona_id: 1,
+    content: "Welcome to the case discussion!",
+    is_user_message: false,
+    sent_at: new Date().toISOString(),
+    read_at: null,
+    metadata: {}
+  }]);
 }
 
 export async function POST(request: Request) {

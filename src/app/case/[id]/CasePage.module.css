@@ -1,0 +1,74 @@
+.virtualClassroom {
+  min-height: 100vh;
+  background-image: url('/classroom-background.jpg');
+  background-size: cover;
+  background-position: center;
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circularTable {
+  width: 90vw;
+  height: 90vh;
+  max-width: 1200px;
+  position: relative;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  padding: 2rem;
+}
+
+.participants {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.participantAvatar {
+  position: absolute;
+  --angle: calc(360deg / var(--total-participants) * var(--participant-index));
+  /* Position avatars in top 240 degrees of the circle (leaving bottom space for user) */
+  --adjusted-angle: calc(var(--angle) * 0.67 - 30deg);
+  transform: rotate(var(--adjusted-angle)) translateY(-42vh) rotate(calc(-1 * var(--adjusted-angle)));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.currentUser {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.avatar {
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.participantName {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+}
+
+.tableContent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  max-width: 80%;
+} 

@@ -248,71 +248,189 @@
 }
 
 .heroCardsSection {
-  margin-top: 4rem;
+  position: relative;
+  margin-top: 2rem;
+  width: 100%;
+  height: 600px;
+  overflow: visible;
+  padding: 0 4rem;
 }
 
-.heroCards {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2rem;
-  padding: 0 2rem;
-  max-width: 1600px;
+.sectionTitle {
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 2rem;
+}
+
+.heroCardsContainer {
+  width: 100%;
+  max-width: 3200px;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
   margin: 0 auto;
 }
 
+.heroCards {
+  position: relative;
+  display: flex;
+  gap: 2rem;
+  height: 100%;
+  padding: 2rem;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  min-width: max-content;
+}
+
 .heroCardGroup {
-  flex: 1;
-  min-width: 300px;
-  max-width: 400px;
-  margin: 1rem;
+  flex: 0 0 500px;
+  height: 500px;
+  transition: all 0.5s ease;
+  cursor: pointer;
+  opacity: 0.7;
+  filter: grayscale(0.3);
+  transform: scale(0.95);
+}
+
+/* Enhanced hover effect */
+.heroCardGroup:hover {
+  opacity: 1;
+  filter: none;
+  transform: scale(1.08);
+  z-index: 10;
 }
 
 .heroCard {
   position: relative;
-  height: 300px;
-  border-radius: 1.5rem;
+  height: 100%;
+  border-radius: 24px;
   overflow: hidden;
-  cursor: pointer;
-  transition: transform 0.3s, box-shadow 0.3s;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  transition: all 0.5s ease;
 }
 
+.heroCardGroup:hover .heroCard {
+  box-shadow: 0 12px 40px rgba(62, 106, 225, 0.4);
+}
+
+/* Navigation buttons */
+.navButton {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  z-index: 30;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.navButton:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.navPrev {
+  left: -1rem;
+}
+
+.navNext {
+  right: -1rem;
+}
+
+/* Add glow effect on hover */
+.heroCard {
+  position: relative;
+  height: 400px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  transition: all 0.5s ease;
+}
+
+.heroCardGroup:hover .heroCard {
+  box-shadow: 0 8px 32px rgba(62, 106, 225, 0.3);
+}
+
+/* Brighten image on hover */
 .heroCardImage {
   position: absolute;
   inset: 0;
   background-size: cover;
   background-position: center;
-  transition: transform 0.5s;
+  transition: all 0.5s ease;
+  border-radius: 24px;
+  filter: brightness(0.8);
 }
 
-.heroCardContent {
+.heroCardGroup:hover .heroCardImage {
+  filter: brightness(1);
+}
+
+/* Enhance gradient on hover */
+.heroCardImage::after {
+  content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 1.5rem;
-  color: white;
-  z-index: 1;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.2),
+    rgba(0, 0, 0, 0.7)
+  );
+  transition: opacity 0.3s ease;
 }
 
-.heroCardTitle {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  color: white;
+.heroCardGroup:hover .heroCardImage::after {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.6)
+  );
 }
 
-.heroCardDescription {
-  font-size: 0.875rem;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.9);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+/* Update dots positioning */
+.dotsContainer {
+  position: relative;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 2rem;
+  z-index: 30;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.dot.active {
+  background: white;
+  transform: scale(1.2);
+}
+
+.dot:hover {
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .loading {
@@ -320,15 +438,6 @@
   font-size: 1.2rem;
   text-align: center;
   width: 100%;
-}
-
-.heroCard:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-}
-
-.heroCard:hover .heroCardImage {
-  transform: scale(1.05);
 }
 
 @media (max-width: 768px) {
@@ -352,4 +461,33 @@
 
 .testLink:hover {
   background-color: #e5e7eb;
+}
+
+.heroCardContent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2rem;
+  color: white;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.6) 50%,
+    transparent 100%
+  );
+}
+
+.heroCardTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: white;
+}
+
+.heroCardDescription {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
 } 

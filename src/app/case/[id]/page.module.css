@@ -1,0 +1,714 @@
+.main {
+  min-height: 100vh;
+  height: 100vh;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.galleryView {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  height: 100vh;
+  background: #ffffff;
+  overflow-y: auto;
+}
+
+.professorContainer {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.professorContainer .participant {
+  margin-bottom: 0;
+  transform: scale(1);
+}
+
+.galleryGrid {
+  flex: 1;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 24px;
+  padding: 12px 24px 24px;
+  place-items: center;
+}
+
+.smallParticipantsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  height: 160px;
+  padding-bottom: 12px;
+  padding-top: 24px;
+  background: #000000;
+}
+
+.smallParticipant {
+  position: relative;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  aspect-ratio: 16/9;
+}
+
+.mainSpeaker {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 160px;
+  background: #000000;
+}
+
+.mainParticipant {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #1a1a1a;
+  border: 2px solid #0A84FF;
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
+  max-height: calc(100vh - 250px);
+  animation: speak 2s ease-in-out infinite, borderFlow 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.participantImage {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: center 20%;
+}
+
+.smallParticipant:nth-child(2) .participantImage,
+.smallParticipant:nth-child(3) .participantImage {
+  object-position: center 20%;
+}
+
+.participantOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.transcriptArea {
+  background: #ffffff;
+  height: 100vh;
+  padding: 1.5rem;
+  overflow-y: auto;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  color: #000000;
+  display: flex;
+  flex-direction: column;
+}
+
+.messagesContainer {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.inputArea {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.inputWrapper {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.textInput {
+  flex-grow: 1;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 48px;
+  resize: none;
+  font-family: inherit;
+  background: #f5f5f5;
+}
+
+.voiceButton {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: #0A84FF;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.voiceButton:hover {
+  background: #0070e0;
+}
+
+.voiceButton.recording {
+  background: #ff3b30;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.galleryGrid::after {
+  display: none;
+}
+
+.message {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: #f5f5f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 0.5rem;
+}
+
+.messageName {
+  font-weight: 500;
+  color: #000000;
+  margin-right: auto;
+}
+
+.messageTime {
+  color: #666666;
+  font-size: 0.875rem;
+}
+
+.messageAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.messageContent {
+  color: #000000;
+  line-height: 1.5;
+}
+
+/* Remove these styles */
+.recipientSelector,
+.recipientChip,
+.recipientChip.active {
+  display: none;
+}
+
+/* Update input area spacing */
+.inputArea {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.inputWrapper {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.participantName {
+  margin-right: 8px;
+}
+
+.participantRole {
+  opacity: 0.9;
+}
+
+@keyframes speak {
+  0% {
+    transform: scale(1);
+    border-color: #0A84FF;
+  }
+  50% {
+    transform: scale(1.02);
+    border-color: #00c6ff;
+  }
+  100% {
+    transform: scale(1);
+    border-color: #0A84FF;
+  }
+}
+
+@keyframes borderFlow {
+  0% {
+    border-width: 2px;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
+  }
+  50% {
+    border-width: 3px;
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.2);
+  }
+  100% {
+    border-width: 2px;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
+  }
+}
+
+.speakingIndicator {
+  background: rgba(10, 132, 255, 0.2);
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.participant {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  overflow: visible;
+  cursor: pointer;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.participantBackground {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  filter: blur(5px);
+  background-size: 200% 200%;
+  z-index: 1;
+}
+
+.blueBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(173, 216, 255, 0.98) 15%,
+    rgba(0, 122, 255, 0.95) 40%,
+    rgba(0, 84, 255, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(0, 122, 255, 0.5);
+}
+
+.speaking .blueBackground {
+  animation: gradientShift 8s ease infinite;
+}
+
+.purpleBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(216, 173, 255, 0.98) 15%,
+    rgba(147, 51, 234, 0.95) 40%,
+    rgba(88, 28, 135, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(147, 51, 234, 0.5);
+}
+
+.greenBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(173, 255, 216, 0.98) 15%,
+    rgba(0, 208, 132, 0.95) 40%,
+    rgba(0, 166, 81, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(0, 208, 132, 0.5);
+}
+
+.orangeBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 216, 173, 0.98) 15%,
+    rgba(255, 149, 79, 0.95) 40%,
+    rgba(255, 94, 0, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(255, 149, 79, 0.5);
+}
+
+.pinkBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 173, 216, 0.98) 15%,
+    rgba(255, 105, 180, 0.95) 40%,
+    rgba(219, 56, 148, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(255, 105, 180, 0.5);
+}
+
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: rgba(255, 255, 255, 1);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(0px);
+  z-index: 2;
+}
+
+.particle:nth-child(3n) {
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.particle:nth-child(4n) {
+  width: 1px;
+  height: 1px;
+  background: rgba(255, 255, 255, 1);
+}
+
+.participantInfo {
+  position: absolute;
+  bottom: -35px;
+  width: 100%;
+  text-align: center;
+  color: #333;
+  z-index: 2;
+}
+
+.participantName {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.participantRole {
+  display: block;
+  font-size: 0.8rem;
+  opacity: 0.8;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.outerGlow {
+  position: absolute;
+  width: 112%;
+  height: 112%;
+  border-radius: 50%;
+  opacity: 0.4;
+  filter: blur(15px);
+}
+
+.blueGlow {
+  background: radial-gradient(circle at center,
+    rgba(0, 122, 255, 0.8),
+    rgba(0, 122, 255, 0.1)
+  );
+}
+
+.greenGlow {
+  background: radial-gradient(circle at center,
+    rgba(0, 208, 132, 0.8),
+    rgba(0, 208, 132, 0.1)
+  );
+}
+
+.orangeGlow {
+  background: radial-gradient(circle at center,
+    rgba(255, 149, 79, 0.8),
+    rgba(255, 149, 79, 0.1)
+  );
+}
+
+.pinkGlow {
+  background: radial-gradient(circle at center,
+    rgba(255, 105, 180, 0.8),
+    rgba(255, 105, 180, 0.1)
+  );
+}
+
+.orbit {
+  position: absolute;
+  width: 110%;
+  height: 110%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+/* Hand raise button styles */
+.handRaiseButton {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: #f0f0f0;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.handRaiseButton:hover {
+  background: #e0e0e0;
+}
+
+.handRaiseButton.handRaised {
+  background: #ffd700;
+  color: #000;
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Update Professor's background to be distinct */
+.participant[data-participant-id="0"] .participantBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(173, 216, 255, 0.98) 15%,
+    rgba(0, 122, 255, 0.95) 40%,
+    rgba(0, 84, 255, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(0, 122, 255, 0.5);
+}
+
+/* Make Professor's particles blue colored */
+.participant[data-participant-id="0"] .particle {
+  background: rgba(173, 216, 255, 0.9);
+}
+
+/* Add blue glow for professor */
+.participant[data-participant-id="0"] .outerGlow {
+  background: radial-gradient(circle at center,
+    rgba(0, 122, 255, 0.8),
+    rgba(0, 122, 255, 0.1)
+  );
+}
+
+/* Make James (id="1") red */
+.participant[data-participant-id="1"] .participantBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 173, 173, 0.98) 15%,
+    rgba(255, 59, 48, 0.95) 40%,
+    rgba(200, 33, 39, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(255, 59, 48, 0.5);
+}
+
+/* Make James's particles red colored */
+.participant[data-participant-id="1"] .particle {
+  background: rgba(255, 173, 173, 0.9);
+}
+
+/* Add red glow for James */
+.participant[data-participant-id="1"] .outerGlow {
+  background: radial-gradient(circle at center,
+    rgba(255, 59, 48, 0.8),
+    rgba(255, 59, 48, 0.1)
+  );
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 0%;
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    background-position: 100% 0%;
+    transform: scale(1.05) rotate(2deg);
+  }
+  50% {
+    background-position: 100% 100%;
+    transform: scale(1) rotate(0deg);
+  }
+  75% {
+    background-position: 0% 100%;
+    transform: scale(1.05) rotate(-2deg);
+  }
+  100% {
+    background-position: 0% 0%;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.speaking {
+  animation: speakingPulse 4s ease-in-out infinite;
+}
+
+@keyframes speakingPulse {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(255, 255, 255, 0.3);
+  }
+}
+
+.speaking .participantBackground {
+  animation: rotateBackground 20s linear infinite;
+}
+
+@keyframes rotateBackground {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Make Nathan (id="3") green */
+.participant[data-participant-id="3"] .participantBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(173, 255, 216, 0.98) 15%,
+    rgba(0, 208, 132, 0.95) 40%,
+    rgba(0, 166, 81, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(0, 208, 132, 0.5);
+}
+
+/* Make Nathan's particles green colored */
+.participant[data-participant-id="3"] .particle {
+  background: rgba(173, 255, 216, 0.9);
+}
+
+/* Add green glow for Nathan */
+.participant[data-participant-id="3"] .outerGlow {
+  background: radial-gradient(circle at center,
+    rgba(0, 208, 132, 0.8),
+    rgba(0, 208, 132, 0.1)
+  );
+}
+
+/* Make Sarah (id="2") orange */
+.participant[data-participant-id="2"] .participantBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 216, 173, 0.98) 15%,
+    rgba(255, 149, 79, 0.95) 40%,
+    rgba(255, 94, 0, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(255, 149, 79, 0.5);
+}
+
+/* Make Sarah's particles orange colored */
+.participant[data-participant-id="2"] .particle {
+  background: rgba(255, 216, 173, 0.9);
+}
+
+/* Add orange glow for Sarah */
+.participant[data-participant-id="2"] .outerGlow {
+  background: radial-gradient(circle at center,
+    rgba(255, 149, 79, 0.8),
+    rgba(255, 149, 79, 0.1)
+  );
+}
+
+/* Add audio wave effect */
+.speaking::before,
+.speaking::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  animation: audioWave 2s ease-out infinite;
+}
+
+.speaking::after {
+  animation: audioWave 2s ease-out infinite 0.5s;
+}
+
+@keyframes audioWave {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* Add wave color variations */
+.participant[data-participant-id="0"].speaking::before,
+.participant[data-participant-id="0"].speaking::after {
+  border-color: rgba(0, 122, 255, 0.5);
+}
+
+.participant[data-participant-id="1"].speaking::before,
+.participant[data-participant-id="1"].speaking::after {
+  border-color: rgba(255, 59, 48, 0.5);
+}
+
+.participant[data-participant-id="2"].speaking::before,
+.participant[data-participant-id="2"].speaking::after {
+  border-color: rgba(255, 149, 79, 0.5);
+}
+
+.participant[data-participant-id="3"].speaking::before,
+.participant[data-participant-id="3"].speaking::after {
+  border-color: rgba(0, 208, 132, 0.5);
+}
+
+/* Add Emma's (id="4") wave color variation */
+.participant[data-participant-id="4"].speaking::before,
+.participant[data-participant-id="4"].speaking::after {
+  border-color: rgba(255, 105, 180, 0.5);  /* Pink wave color for Emma */
+}
+
+/* Make Emma's particles pink colored */
+.participant[data-participant-id="4"] .particle {
+  background: rgba(255, 173, 216, 0.9);
+}
+
+/* Add pink glow for Emma */
+.participant[data-participant-id="4"] .outerGlow {
+  background: radial-gradient(circle at center,
+    rgba(255, 105, 180, 0.8),
+    rgba(255, 105, 180, 0.1)
+  );
+}
+
+/* Emma's background */
+.participant[data-participant-id="4"] .participantBackground {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 173, 216, 0.98) 15%,
+    rgba(255, 105, 180, 0.95) 40%,
+    rgba(219, 56, 148, 0.98) 75%
+  );
+  box-shadow: 0 0 30px rgba(255, 105, 180, 0.5);
+}

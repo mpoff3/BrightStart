@@ -1,0 +1,246 @@
+.scene {
+  width: 100%;
+  padding: 2rem;
+  background: #f5f5f5;
+}
+
+.participantsContainer {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.participantCard {
+  width: 300px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.participantCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+.imageContainer {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  overflow: hidden;
+}
+
+.backgroundImage {
+  object-fit: cover;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+.portraitImage {
+  object-fit: cover;
+  z-index: 2;
+  mix-blend-mode: normal;
+}
+
+.overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  z-index: 3;
+}
+
+.nameTag {
+  padding: 1.5rem;
+  text-align: center;
+  background: white;
+}
+
+.nameTag h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.nameTag span {
+  display: block;
+  margin-top: 0.5rem;
+  color: #4a5568;
+  font-size: 1rem;
+}
+
+.discussionLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  height: calc(100vh - 120px);
+  background: #1a1a1a;
+}
+
+.videoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 1rem;
+  width: 100%;
+  height: 100%;
+}
+
+.videoCard {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #2d2d2d;
+  transition: all 0.3s ease;
+}
+
+.videoCard:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.videoContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.participantImage {
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.participantInfo {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.participantStatus {
+  width: 8px;
+  height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+}
+
+.participantName {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.participantRole {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-left: auto;
+}
+
+.activeVideo {
+  box-shadow: 0 0 0 2px #4a9eff;
+}
+
+.activeVideo .participantStatus {
+  background: #4a9eff;
+  box-shadow: 0 0 8px rgba(74, 158, 255, 0.5);
+}
+
+.transcriptPanel {
+  background: #2d2d2d;
+  border-radius: 16px;
+  padding: 1.5rem;
+  overflow-y: auto;
+  color: white;
+  height: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.roundTableContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #2d2d2d;
+}
+
+.tableImage {
+  object-fit: cover;
+  object-position: center;
+  filter: brightness(0.9);
+}
+
+.tableOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  display: flex;
+  align-items: flex-end;
+  padding: 2rem;
+}
+
+.documents {
+  display: flex;
+  gap: 2rem;
+  width: 100%;
+}
+
+.notepad {
+  width: 200px;
+  height: 280px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+  transform: perspective(1000px) rotateX(10deg);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.notes {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(transparent 0%, transparent calc(1.5rem - 1px), #e6e6e6 calc(1.5rem - 1px), #e6e6e6 1.5rem, transparent 1.5rem);
+  background-size: 100% 1.5rem;
+}
+
+.charts {
+  display: flex;
+  gap: 1rem;
+}
+
+.pieChart, .barChart {
+  width: 150px;
+  height: 150px;
+  background: white;
+  border-radius: 8px;
+  transform: perspective(1000px) rotateX(10deg);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.userVideo {
+  border: 2px solid #4a9eff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .discussionLayout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 300px;
+  }
+} 
