@@ -1,30 +1,43 @@
 import { NextResponse } from 'next/server';
-import { getClient } from '@/lib/db';
+import { Pool } from 'pg';
 
-const client = getClient();
+// Create a pool instance
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 export async function GET(request: Request) {
-  console.log('Received GET request for /api/messages');
-  
-  // Get started_case_id from URL parameters
+  // Get the started_case_id from URL params
   const { searchParams } = new URL(request.url);
-  const started_case_id = searchParams.get('started_case_id');
-  
-  if (!started_case_id) {
-    return NextResponse.json({ error: 'started_case_id is required' }, { status: 400 });
+  const startedCaseId = searchParams.get('started_case_id');
+
+  if (!startedCaseId) {
+    return NextResponse.json(
+      { error: 'started_case_id is required' },
+      { status: 400 }
+    );
   }
+
+  // Get a client from the pool
+  const client = await pool.connect();
 
   try {
     const result = await client.query(
       `SELECT * FROM messages 
        WHERE started_case_id = $1 
        ORDER BY sent_at ASC`,
-      [started_case_id]
+      [startedCaseId]
     );
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error('Error fetching messages:', error);
-    return NextResponse.json({ error: 'Database query failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch messages' },
+      { status: 500 }
+    );
+  } finally {
+    // Always release the client back to the pool
+    client.release();
   }
 }
 
@@ -58,6 +71,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // Get a client from the pool
+    const client = await pool.connect();
 
     const result = await client.query(
       `INSERT INTO messages 
