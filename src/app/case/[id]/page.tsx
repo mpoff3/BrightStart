@@ -2,7 +2,7 @@
 import styles from './page.module.css';
 import Image from 'next/image';
 import { motion } from "framer-motion";
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { FaMicrophone, FaHandPaper } from 'react-icons/fa';
 
 export default function CasePage({ params }: { params: { id: string } }) {
@@ -10,7 +10,15 @@ export default function CasePage({ params }: { params: { id: string } }) {
   const [selectedRecipient, setSelectedRecipient] = useState('all');
   const [isRecording, setIsRecording] = useState(false);
   const [raisedHand, setRaisedHand] = useState(false);
+  const [autoSpeaking, setAutoSpeaking] = useState(true);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
+  const [messages, setMessages] = useState<Array<{
+    id: number;
+    participantId: string;
+    content: string;
+    timestamp: string;
+  }>>([]);
+  const [isFinishingThought, setIsFinishingThought] = useState(false);
 
   // Move particle positions to component level
   const particlePositions = useMemo(() => 
@@ -57,14 +65,79 @@ export default function CasePage({ params }: { params: { id: string } }) {
     }
   ];
 
-  const messages = [
-    {
-      id: 1,
-      participantId: '1',
-      content: "From a clinical perspective, I believe AI implementation needs to prioritize patient safety above all else.",
-      timestamp: "10:30 AM"
+  // Add more varied responses for each participant
+  const participantResponses = {
+    '0': [
+      "AI ethics in healthcare require careful consideration.",
+      "We need to balance innovation with patient care.",
+      "Training healthcare staff on AI systems is crucial.",
+      "Data privacy must be our top priority.",
+    ],
+    '2': [
+      "Patients need to be informed about AI use in their care.",
+      "We should ensure AI doesn't replace human connection.",
+      "Accessibility of AI solutions is a key concern.",
+      "Patient feedback should guide AI implementation.",
+    ],
+    '3': [
+      "Clinical workflows need careful AI integration.",
+      "AI should augment, not replace, medical judgment.",
+      "We need clear protocols for AI-assisted diagnosis.",
+      "Real-time monitoring of AI performance is essential.",
+    ],
+    '4': [
+      "Nursing staff need proper AI training programs.",
+      "AI should help reduce administrative burden.",
+      "Patient care quality must remain our focus.",
+      "We need clear escalation procedures.",
+    ],
+  };
+
+  // Add these memoized functions at the top level of the component
+  const getRandomResponse = useMemo(() => (participantId: string) => {
+    const responses = participantResponses[participantId as keyof typeof participantResponses] || [];
+    return responses[Math.floor(Math.random() * responses.length)];
+  }, [participantResponses]);
+
+  const handleParticipantClick = useMemo(() => (participantId: string, customMessage?: string, timestamp?: number) => {
+    setSpeakingId(participantId);
+    
+    const newMessage = {
+      id: timestamp || Date.now(),
+      participantId: participantId,
+      content: customMessage || getRandomResponse(participantId) || "...",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    
+    setMessages(prev => [...prev, newMessage]);
+  }, [getRandomResponse]);
+
+  // Modify the useEffect
+  useEffect(() => {
+    let speakingInterval: NodeJS.Timeout;
+
+    if (autoSpeaking && !raisedHand && !isFinishingThought) {
+      const selectAndSpeak = () => {
+        const availableParticipants = participants.filter(p => p.id !== '1');
+        const nextSpeaker = availableParticipants[Math.floor(Math.random() * availableParticipants.length)];
+        
+        const response = getRandomResponse(nextSpeaker.id);
+        if (response) {
+          const timestamp = Date.now();
+          handleParticipantClick(nextSpeaker.id, response, timestamp);
+        }
+      };
+
+      selectAndSpeak();
+      speakingInterval = setInterval(selectAndSpeak, 7000);
     }
-  ];
+
+    return () => {
+      if (speakingInterval) {
+        clearInterval(speakingInterval);
+      }
+    };
+  }, [autoSpeaking, raisedHand, isFinishingThought, getRandomResponse, handleParticipantClick]);
 
   const handleVoiceInput = () => {
     if (!isRecording) {
@@ -80,18 +153,15 @@ export default function CasePage({ params }: { params: { id: string } }) {
     e.preventDefault();
     const message = textInputRef.current?.value;
     if (message?.trim()) {
-      // Create new message
       const newMessage = {
-        id: messages.length + 1,
-        participantId: selectedRecipient === 'all' ? '1' : selectedRecipient, // Default to first participant if sending to all
+        id: Date.now(),
+        participantId: '1',
         content: message,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       
-      // Add message to messages array
-      messages.push(newMessage);
+      setMessages(prev => [...prev, newMessage]);
       
-      // Clear input
       if (textInputRef.current) {
         textInputRef.current.value = '';
       }
@@ -105,6 +175,25 @@ export default function CasePage({ params }: { params: { id: string } }) {
     }
   };
 
+  // Modify hand raise handler
+  const handleRaiseHand = () => {
+    if (!raisedHand) {
+      // When raising hand
+      setIsFinishingThought(true);
+      // Wait for current speaker to finish (10 seconds)
+      setTimeout(() => {
+        setAutoSpeaking(false);
+        setIsFinishingThought(false);
+        setSpeakingId('1');
+        setRaisedHand(true);
+      }, 10000);
+    } else {
+      // When lowering hand
+      setRaisedHand(false);
+      setAutoSpeaking(true);
+    }
+  };
+
   const renderParticipant = (participant: any) => {
     const isSpeaking = participant.id === speakingId;
     
@@ -112,7 +201,7 @@ export default function CasePage({ params }: { params: { id: string } }) {
       <motion.div
         key={participant.id}
         className={`${styles.participant} ${isSpeaking ? styles.speaking : ''}`}
-        onClick={() => setSpeakingId(participant.id)}
+        onClick={() => handleParticipantClick(participant.id)}
         data-participant-id={participant.id}
         animate={isSpeaking ? {
           scale: [0.98, 1.02, 0.98],
@@ -196,16 +285,24 @@ export default function CasePage({ params }: { params: { id: string } }) {
           {messages.map((message) => {
             const participant = participants.find(p => p.id === message.participantId);
             return (
-              <div key={message.id} className={styles.message}>
+              <div 
+                key={message.id} 
+                className={`${styles.message} ${styles[`message${participant?.id}`]}`}
+              >
                 <div className={styles.messageHeader}>
-                  <Image
-                    src={participant?.avatar || ''}
-                    alt={participant?.name || ''}
-                    width={32}
-                    height={32}
-                    className={styles.messageAvatar}
+                  <div className={styles.messageAvatar} 
+                       style={{ 
+                         backgroundColor: 
+                           participant?.id === '1' ? '#7CB9E8' : // Light blue for "You"
+                           participant?.id === '0' ? '#0A84FF' :
+                           participant?.id === '2' ? '#FF9F0A' :
+                           participant?.id === '3' ? '#30D158' :
+                           '#FF2D55'
+                       }}
                   />
-                  <span className={styles.messageName}>{participant?.name}</span>
+                  <span className={styles.messageName}>
+                    {participant?.id === '1' ? 'You' : participant?.name}
+                  </span>
                   <span className={styles.messageTime}>{message.timestamp}</span>
                 </div>
                 <div className={styles.messageContent}>
@@ -228,7 +325,7 @@ export default function CasePage({ params }: { params: { id: string } }) {
             <button
               type="button"
               className={`${styles.handRaiseButton} ${raisedHand ? styles.handRaised : ''}`}
-              onClick={() => setRaisedHand(!raisedHand)}
+              onClick={handleRaiseHand}
             >
               <FaHandPaper />
             </button>
