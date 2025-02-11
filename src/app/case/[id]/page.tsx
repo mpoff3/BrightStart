@@ -95,6 +95,7 @@ export default function CasePage() {
         };
         await audioRef.current.play();
       }
+      
     } catch (error) {
       console.error('Error playing text-to-speech:', error);
       setSpeakingPersonaId(null);

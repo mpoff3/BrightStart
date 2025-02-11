@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Client } from 'pg';
+import { getClient } from '@/lib/db';
 
-const client = new Client({
-  connectionString: process.env.DATABASE_URL,
-});
-
-client.connect();
+const client = getClient();
 
 export async function GET(request: Request) {
   console.log('Received GET request for /api/messages');
