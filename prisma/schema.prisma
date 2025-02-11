@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model messages {
+  message_id      BigInt        @id @default(autoincrement())
+  started_case_id Int
+  persona_id      Int?
+  user_id         Int?
+  content         String
+  is_user_message Boolean
+  sent_at         DateTime      @default(now()) @db.Timestamptz(6)
+  read_at         DateTime?     @db.Timestamptz(6)
+  metadata        Json?
+  personas        personas?     @relation(fields: [persona_id], references: [persona_id], onUpdate: NoAction)
+  started_cases   started_cases @relation(fields: [started_case_id], references: [started_case_id], onDelete: Cascade, onUpdate: NoAction)
+  users           users?        @relation(fields: [user_id], references: [user_id], onUpdate: NoAction)
+
+  @@index([started_case_id], map: "idx_messages_started_cases")
+  @@index([sent_at], map: "idx_messages_time", type: Brin)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cases {
+  case_id       Int             @id @default(autoincrement())
+  title         String
+  description   String
+  file_name     String          @unique
+  file_path     String          @unique
+  file_hash     Bytes
+  file_size     BigInt
+  is_public     Boolean         @default(false)
+  uploader_id   Int
+  uploaded_at   DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?       @db.Timestamptz(6)
+  users         users           @relation(fields: [uploader_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  core_insights core_insights[]
+  started_cases started_cases[]
+
+  @@index([file_hash], map: "idx_case_hash")
+  @@index([uploader_id], map: "idx_case_uploader")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model core_insights {
+  insight_id       Int                @id @default(autoincrement())
+  case_id          Int
+  title            String
+  description      String
+  sort_order       Int                @db.SmallInt
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  cases            cases              @relation(fields: [case_id], references: [case_id], onDelete: Cascade, onUpdate: NoAction)
+  covered_insights covered_insights[]
+
+  @@unique([case_id, sort_order])
+  @@index([case_id], map: "idx_core_insights_case")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model covered_insights {
+  covered_insight_id Int           @id @default(autoincrement())
+  started_case_id    Int
+  insight_id         Int
+  covered_at         DateTime      @default(now()) @db.Timestamptz(6)
+  covered_by         Int?
+  notes              String?
+  users              users?        @relation(fields: [covered_by], references: [user_id], onUpdate: NoAction)
+  core_insights      core_insights @relation(fields: [insight_id], references: [insight_id], onDelete: Cascade, onUpdate: NoAction)
+  started_cases      started_cases @relation(fields: [started_case_id], references: [started_case_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([started_case_id, insight_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model personas {
+  persona_id      Int           @id @default(autoincrement())
+  started_case_id Int
+  name            String
+  role            String
+  description     String
+  avatar_url      String?
+  system_prompt   String
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  messages        messages[]
+  started_cases   started_cases @relation(fields: [started_case_id], references: [started_case_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([started_case_id], map: "idx_personas_case")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model started_cases {
+  started_case_id  Int                @id @default(autoincrement())
+  user_id          Int
+  case_id          Int
+  status           case_status        @default(not_started)
+  started_at       DateTime           @default(now()) @db.Timestamptz(6)
+  completed_at     DateTime?          @db.Timestamptz(6)
+  covered_insights covered_insights[]
+  messages         messages[]
+  personas         personas[]
+  cases            cases              @relation(fields: [case_id], references: [case_id], onDelete: Cascade, onUpdate: NoAction)
+  users            users              @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, case_id])
+  @@index([case_id], map: "idx_started_cases_case")
+  @@index([user_id], map: "idx_started_cases_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  user_id          Int                @id @default(autoincrement())
+  email            String             @unique
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  last_active      DateTime?          @db.Timestamptz(6)
+  password_hash    String             @db.Char(60)
+  password_salt    String?
+  cases            cases[]
+  covered_insights covered_insights[]
+  messages         messages[]
+  started_cases    started_cases[]
+}
+
+enum case_status {
+  not_started
+  in_progress
+  paused
+  completed
+}

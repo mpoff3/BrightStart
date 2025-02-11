@@ -352,4 +352,55 @@
 
 .testLink:hover {
   background-color: #e5e7eb;
+}
+
+.audioSection {
+  margin: 2rem 0;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.recordingControls {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.recordButton,
+.stopButton {
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.recordButton {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.stopButton {
+  background-color: #f44336;
+  color: white;
+}
+
+.transcriptionBox {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.transcriptionBox h3 {
+  margin: 0 0 0.5rem 0;
+  color: #fff;
+}
+
+.transcriptionBox p {
+  margin: 0;
+  color: #fff;
+  line-height: 1.5;
 } 
