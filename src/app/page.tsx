@@ -29,6 +29,8 @@ export default function Home() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrollPosition, setScrollPosition] = useState(0);
   const cardsRef = useRef<HTMLDivElement>(null);
+  const [hoveredCase, setHoveredCase] = useState<number | null>(null);
+  const [visibleStartIndex, setVisibleStartIndex] = useState(0);
 
   useEffect(() => {
     const fetchCases = async () => {
@@ -50,10 +52,57 @@ export default function Home() {
     fetchCases();
   }, []);
 
-  const tempCases = [{
-    case_id: 1,
-    title: "Healthcare Innovation",
-    description: "Explore the implementation of AI diagnostic systems in a major hospital setting.",
+  const tempCases = [
+    {
+      case_id: 1,
+      title: "Healthcare Innovation",
+      description: "AI diagnostic systems in hospitals",
+      image_url: "https://images.unsplash.com/photo-1631815589968-fdb09a223b1e?q=80&w=2940&auto=format&fit=crop"
+    },
+    {
+      case_id: 2,
+      title: "Energy Systems",
+      description: "Renewable energy solutions",
+      image_url: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?q=80&w=2940&auto=format&fit=crop"
+    },
+    {
+      case_id: 3,
+      title: "Organization Design",
+      description: "Modern business structures",
+      image_url: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2940&auto=format&fit=crop"
+    },
+    {
+      case_id: 4,
+      title: "Portfolio Strategy",
+      description: "Investment approaches",
+      image_url: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=2940&auto=format&fit=crop"
+    },
+    {
+      case_id: 5,
+      title: "Leadership Innovation",
+      description: "Modern leadership methods",
+      image_url: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=2940&auto=format&fit=crop"
+    },
+    {
+      case_id: 6,
+      title: "Food Truck Business",
+      description: "Mobile food entrepreneurship",
+      image_url: "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?q=80&w=2940&auto=format&fit=crop"
+    },
+    {
+      case_id: 7,
+      title: "Learning Styles",
+      description: "Educational innovation methods",
+      image_url: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2940&auto=format&fit=crop"
+    },
+    {
+      case_id: 8,
+      title: "Luxury Retail",
+      description: "High-end retail strategies",
+      image_url: "https://images.unsplash.com/photo-1541744573515-478c959628a0?q=80&w=2940&auto=format&fit=crop"
+    }
+  ].map(c => ({
+    ...c,
     file_name: "",
     file_path: "",
     file_hash: { type: "", data: [] },
@@ -61,119 +110,84 @@ export default function Home() {
     is_public: true,
     uploader_id: 1,
     uploaded_at: "",
-    updated_at: "",
-    image_url: ""
-  }];
+    updated_at: ""
+  }));
 
-  const displayCases = cases.length > 0 ? cases : tempCases;
+  const visibleCases = tempCases.slice(visibleStartIndex, visibleStartIndex + 4);
 
   const handleCardClick = (caseId: number) => {
     router.push(`/case/${caseId}`);
   };
 
-  const totalSlides = Math.ceil(displayCases.length / 4);
-
-  const handleDotClick = (index: number) => {
-    setActiveIndex(index);
-  };
-
   const handleNext = () => {
-    if (cardsRef.current) {
-      const cardWidth = cardsRef.current.clientWidth / 3; // One third of the container width
-      const gap = 32; // 2rem in pixels
-      const scrollAmount = cardWidth + gap;
-      const maxScroll = cardsRef.current.scrollWidth - cardsRef.current.clientWidth;
-      
-      const newPosition = scrollPosition + scrollAmount;
-      setScrollPosition(Math.min(newPosition, maxScroll));
+    if (visibleStartIndex < tempCases.length - 4) {
+      setVisibleStartIndex(prev => prev + 4);
+      setScrollPosition((visibleStartIndex + 4) * (280 + 32));
     }
   };
 
   const handlePrev = () => {
-    const cardWidth = cardsRef.current?.clientWidth ? cardsRef.current.clientWidth / 3 : 0;
-    const gap = 32;
-    const scrollAmount = cardWidth + gap;
-    
-    const newPosition = scrollPosition - scrollAmount;
-    setScrollPosition(Math.max(0, newPosition));
+    if (visibleStartIndex >= 4) {
+      setVisibleStartIndex(prev => prev - 4);
+      setScrollPosition((visibleStartIndex - 4) * (280 + 32));
+    }
   };
 
   return (
     <div className={styles.container}>
-      {/* Navigation */}
       <nav className={styles.nav}>
         <div className={styles.logo}>
           CaseAI
         </div>
         <div className={styles.navRight}>
-        <Link href="/test" className={styles.testLink}>Test API</Link>
-          <a href="#account">Account</a>
+          <Link href="/test" className={styles.navLink}>Test API</Link>
+          <Link href="#account" className={styles.navLink}>Account</Link>
         </div>
       </nav>
 
-      {/* Hero Section */}
       <section className={styles.hero}>
         <div className={styles.heroContent}>
-          <h1>AI-Driven Case Discussions</h1>
-          <h2>Experience Harvard's Case Method Today</h2>
+          <div className={styles.titleSection}>
+            <h1>AI-Driven Case Discussions</h1>
+            <h2>Experience Harvard's Case Method Today</h2>
+          </div>
           
-          <h3 className={styles.sectionTitle}>Choose Your Case</h3>
-          
-          <div className={styles.heroCardsSection}>
-            <button 
-              className={`${styles.navButton} ${styles.navPrev}`}
-              onClick={handlePrev}
-              disabled={scrollPosition <= 0}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24">
-                <path d="M15 19l-7-7 7-7" stroke="currentColor" fill="none" strokeWidth="2"/>
-              </svg>
-            </button>
-
-            <div className={styles.heroCardsContainer}>
-              <div 
-                ref={cardsRef}
-                className={styles.heroCards}
-                style={{ 
-                  transform: `translateX(-${scrollPosition}px)`,
-                }}
-              >
-                {loading ? (
-                  <div className={styles.loading}>Loading cases...</div>
-                ) : (
-                  displayCases.map((caseItem) => (
-                    <div 
-                      key={caseItem.case_id} 
-                      className={styles.heroCardGroup}
-                      onClick={() => handleCardClick(caseItem.case_id)}
-                    >
-                      <div className={styles.heroCard}>
+          <div className={styles.casesSection}>
+            <h3 className={styles.sectionTitle}>Choose Your Case</h3>
+            
+            <div className={styles.casesDisplay}>
+              <div className={styles.casesContainer}>
+                <div 
+                  ref={cardsRef}
+                  className={styles.cases}
+                >
+                  {loading ? (
+                    <div className={styles.loading}>Loading cases...</div>
+                  ) : (
+                    tempCases.slice(0, 4).map((caseItem) => (
+                      <div 
+                        key={caseItem.case_id} 
+                        className={`${styles.caseCard} ${
+                          hoveredCase === caseItem.case_id ? styles.hovered : styles.dimmed
+                        }`}
+                        onClick={() => handleCardClick(caseItem.case_id)}
+                        onMouseEnter={() => setHoveredCase(caseItem.case_id)}
+                        onMouseLeave={() => setHoveredCase(null)}
+                      >
                         <div 
-                          className={styles.heroCardImage}
-                          style={{ 
-                            backgroundImage: `url(${caseItem.image_url})` 
-                          }}
+                          className={styles.caseImage}
+                          style={{ backgroundImage: `url(${caseItem.image_url})` }}
                         />
-                        <div className={styles.heroCardContent}>
-                          <h3 className={styles.heroCardTitle}>{caseItem.title}</h3>
-                          <p className={styles.heroCardDescription}>{caseItem.description}</p>
+                        <div className={styles.caseContent}>
+                          <h3 className={styles.caseTitle}>{caseItem.title}</h3>
+                          <p className={styles.caseDescription}>{caseItem.description}</p>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
             </div>
-
-            <button 
-              className={`${styles.navButton} ${styles.navNext}`}
-              onClick={handleNext}
-              disabled={cardsRef.current && scrollPosition >= cardsRef.current.scrollWidth - cardsRef.current.clientWidth}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24">
-                <path d="M9 5l7 7-7 7" stroke="currentColor" fill="none" strokeWidth="2"/>
-              </svg>
-            </button>
           </div>
         </div>
       </section>

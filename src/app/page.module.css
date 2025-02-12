@@ -14,7 +14,7 @@
   align-items: center;
   padding: 1.5rem 3rem;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 59, 70, 0.1);
   backdrop-filter: blur(10px);
 }
 
@@ -45,10 +45,12 @@
 
 .hero {
   height: 100vh;
-  background: linear-gradient(to bottom, 
-    #a7c6ed 0%,    /* Lighter blue at top */
-    #6ab7f8 50%,   /* Medium blue in middle */
-    #e0f0ff 100%   /* Very light blue at bottom */
+  background: linear-gradient(to right, 
+    #003B46 0%,    /* Darkest turquoise */
+    #005B6A 25%,   /* Dark turquoise */
+    #007989 50%,   /* Medium turquoise */
+    #005B6A 75%,   /* Dark turquoise */
+    #003B46 100%   /* Darkest turquoise */
   );
   display: flex;
   align-items: center;
@@ -122,24 +124,24 @@
 }
 
 .primaryButton {
-  background-color: #3e6ae1;
+  background-color: #007989;
   color: #fff;
   border: none;
 }
 
 .primaryButton:hover {
-  background-color: #2851c7;
+  background-color: #005B6A;
 }
 
 .secondaryButton {
-  background-color: rgba(26, 115, 232, 0.2); /* Light blue with transparency */
+  background-color: rgba(0, 91, 106, 0.2);
   color: #fff;
   border: 2px solid rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
 }
 
 .secondaryButton:hover {
-  background-color: rgba(26, 115, 232, 0.3); /* Slightly more opaque on hover */
+  background-color: rgba(0, 91, 106, 0.3);
   border-color: #ffffff;
 }
 
@@ -166,85 +168,91 @@
 }
 
 .casesSection {
-  padding: 5rem 1rem;
-  background: #fff;
-}
-
-.casesContainer {
-  max-width: 1200px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 1600px;
   margin: 0 auto;
 }
 
-.casesTitle {
-  font-size: 2.5rem;
-  font-weight: bold;
-  text-align: center;
-  margin-bottom: 3rem;
-  color: #333;
+.casesDisplay {
+  position: relative;
+  width: 100%;
+  max-width: 1500px;
+  margin: 2rem auto;
+  padding: 0 2rem;
 }
 
-.casesGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+.casesContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.cases {
+  display: flex;
+  justify-content: space-between;  /* Evenly space the cards */
   gap: 2rem;
+  padding: 0 2rem;
 }
 
 .caseCard {
-  cursor: pointer;
-  background: #fff;
-  border-radius: 1rem;
+  width: 320px;  /* Fixed width */
+  height: 320px;  /* Square aspect ratio */
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  opacity: 0.7;
+  transform: scale(0.95);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-.caseCard:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+.caseCard.hovered {
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  filter: grayscale(0%);
 }
 
-.caseImageContainer {
-  position: relative;
-  aspect-ratio: 16/9;
+.caseCard.dimmed {
+  opacity: 0.7;
+  transform: scale(0.95);
+  filter: grayscale(30%);
 }
 
 .caseImage {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background-size: cover;
   background-position: center;
-  transition: transform 0.5s;
-}
-
-.caseCard:hover .caseImage {
-  transform: scale(1.1);
+  z-index: 1;
 }
 
 .caseContent {
   position: absolute;
-  inset: 0;
-  padding: 2rem;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0) 100%);
+  color: white;
+  z-index: 2;
 }
 
 .caseTitle {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: white;
+  font-size: 1.25rem;
+  font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
 .caseDescription {
-  color: #e5e5e5;
-}
-
-@media (max-width: 768px) {
-  .casesGrid {
-    grid-template-columns: 1fr;
-  }
+  font-size: 0.875rem;
+  opacity: 0.9;
+  line-height: 1.4;
 }
 
 .heroCardsSection {
@@ -313,44 +321,6 @@
 
 .heroCardGroup:hover .heroCard {
   box-shadow: 0 12px 40px rgba(62, 106, 225, 0.4);
-}
-
-/* Navigation buttons */
-.navButton {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  z-index: 30;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.navButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.navButton:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-50%) scale(1.1);
-}
-
-.navPrev {
-  left: -1rem;
-}
-
-.navNext {
-  right: -1rem;
 }
 
 /* Add glow effect on hover */
