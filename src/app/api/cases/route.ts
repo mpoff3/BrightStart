@@ -1,12 +1,33 @@
 import { NextResponse } from 'next/server';
-import { getClient } from '@/lib/db';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Required for Supabase connection
+  }
+});
 
 export async function GET() {
-  const client = await getClient();
-  
+  let client;
   try {
-    const result = await client.query('SELECT * FROM cases');
-    return NextResponse.json(result.rows);
+    client = await pool.connect();
+    const result = await client.query('SELECT * FROM cases ORDER BY title ASC');
+    
+    // Transform the data to match the frontend's expected format
+    const transformedCases = result.rows.map(row => ({
+      case_id: row.case_id,
+      title: row.title,
+      description: row.content, // Map content to description for frontend compatibility
+      // Add any other fields the frontend expects with default values
+      file_name: 'placeholder.pdf',
+      file_path: '/placeholder',
+      is_public: true,
+      uploaded_at: new Date().toISOString(),
+      uploader_id: 1
+    }));
+
+    return NextResponse.json(transformedCases);
   } catch (error) {
     console.error('Error fetching cases:', error);
     return NextResponse.json(
@@ -14,6 +35,6 @@ export async function GET() {
       { status: 500 }
     );
   } finally {
-    client.release(); // Important: Release the client back to the pool
+    if (client) client.release();
   }
 } 

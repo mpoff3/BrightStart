@@ -1,32 +1,38 @@
 import { NextResponse } from 'next/server';
-import { Client } from 'pg';
+import { Pool } from 'pg';
 
-const client = new Client({
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-client.connect();
-
 export async function GET(request: Request) {
-  console.log('Received GET request for /api/personas');
-  
-  // Get started_case_id from URL parameters
   const { searchParams } = new URL(request.url);
-  const started_case_id = searchParams.get('started_case_id');
-  
+  const startedCaseId = searchParams.get('started_case_id');
+
+  if (!startedCaseId) {
+    return NextResponse.json(
+      { error: 'started_case_id is required' },
+      { status: 400 }
+    );
+  }
+
+  let client;
   try {
-    let query = 'SELECT * FROM personas';
-    let params: any[] = [];
-    
-    if (started_case_id) {
-      query += ' WHERE started_case_id = $1';
-      params.push(started_case_id);
-    }
-    
-    const result = await client.query(query, params);
+    client = await pool.connect();
+    const result = await client.query(
+      `SELECT * FROM personas 
+       WHERE started_case_id = $1 
+       ORDER BY name ASC`,
+      [startedCaseId]
+    );
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error('Error fetching personas:', error);
-    return NextResponse.json({ error: 'Database query failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch personas' },
+      { status: 500 }
+    );
+  } finally {
+    if (client) client.release();
   }
 } 

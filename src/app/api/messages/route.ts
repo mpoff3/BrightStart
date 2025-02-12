@@ -6,7 +6,10 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20, // Limit maximum connections
   idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
-  connectionTimeoutMillis: 2000 // Return an error after 2 seconds if connection could not be established
+  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Handle pool errors
@@ -27,6 +30,15 @@ export async function GET(request: Request) {
     );
   }
 
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(startedCaseId)) {
+    return NextResponse.json(
+      { error: 'Invalid UUID format for started_case_id' },
+      { status: 400 }
+    );
+  }
+
   let client;
   try {
     // Get a client from the pool
@@ -34,16 +46,16 @@ export async function GET(request: Request) {
 
     let query = `
       SELECT * FROM messages 
-      WHERE started_case_id = $1
+      WHERE started_case_id = $1::uuid
     `;
     const params = [startedCaseId];
 
     if (afterId) {
-      query += ` AND message_id > $2`;
+      query += ` AND time_sent > (SELECT time_sent FROM messages WHERE message_id = $2::uuid)`;
       params.push(afterId);
     }
 
-    query += ` ORDER BY sent_at ASC`;
+    query += ` ORDER BY time_sent ASC`;
 
     const result = await client.query(query, params);
     return NextResponse.json(result.rows);
@@ -62,22 +74,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   let client;
   try {
-    let body;
-    const contentType = request.headers.get('content-type');
+    const body = await request.json();
+    const { started_case_id, content, is_human } = body;
 
-    if (contentType?.includes('multipart/form-data')) {
-      const formData = await request.formData();
-      body = {
-        started_case_id: parseInt(formData.get('started_case_id') as string),
-        persona_id: parseInt(formData.get('persona_id') as string),
-        content: formData.get('content') as string,
-        is_user_message: formData.get('is_user_message') === 'true'
-      };
-    } else {
-      body = await request.json();
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(started_case_id)) {
+      return NextResponse.json(
+        { error: 'Invalid UUID format for started_case_id' },
+        { status: 400 }
+      );
     }
-
-    const { started_case_id, persona_id, content, is_user_message } = body;
 
     if (!started_case_id || !content) {
       return NextResponse.json(
@@ -88,52 +95,20 @@ export async function POST(request: Request) {
 
     client = await pool.connect();
 
-    // Insert the user's message
-    const userResult = await client.query(
+    const result = await client.query(
       `INSERT INTO messages 
-        (started_case_id, persona_id, content, is_user_message, sent_at) 
-       VALUES ($1, $2, $3, $4, NOW()) 
+        (started_case_id, content, is_human, time_sent) 
+       VALUES ($1::uuid, $2, $3, CURRENT_TIMESTAMP) 
        RETURNING *`,
-      [started_case_id, persona_id, content, is_user_message]
+      [started_case_id, content, is_human]
     );
 
-    // Simulate AI responses for testing
-    const testResponses = [
-      "I understand your concern. Let me address that point by point.",
-      "That's an interesting perspective. Here's what I think about it.",
-      "I'd like to add some additional context to this discussion."
-    ];
-
-    // Insert AI responses with slight delays between them
-    const aiResponses = [];
-    for (let i = 0; i < testResponses.length; i++) {
-      // Add a small delay between insertions to simulate natural timing
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const aiResult = await client.query(
-        `INSERT INTO messages 
-          (started_case_id, persona_id, content, is_user_message, sent_at) 
-         VALUES ($1, $2, $3, false, NOW() + interval '${i + 1} seconds') 
-         RETURNING *`,
-        [started_case_id, persona_id, testResponses[i]]
-      );
-      
-      aiResponses.push(aiResult.rows[0]);
-    }
-
-    // Return both the user message and AI responses
-    return NextResponse.json({
-      userMessage: userResult.rows[0],
-      aiResponses: aiResponses
-    });
+    return NextResponse.json(result.rows[0]);
 
   } catch (error) {
     console.error('Error creating message:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to create message',
-        details: error.message 
-      },
+      { error: 'Failed to create message' },
       { status: 500 }
     );
   } finally {

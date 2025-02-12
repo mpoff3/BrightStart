@@ -25,15 +25,22 @@ export default function Home() {
   const router = useRouter();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCases = async () => {
       try {
         const response = await fetch('/api/cases');
+        if (!response.ok) {
+          throw new Error('Failed to fetch cases');
+        }
         const data = await response.json();
-        setCases(data);
+        // Ensure we're setting an array
+        setCases(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching cases:', error);
+        setError(error instanceof Error ? error.message : 'Failed to fetch cases');
+        setCases([]); // Set empty array on error
       } finally {
         setLoading(false);
       }
@@ -65,6 +72,10 @@ export default function Home() {
             <div className={styles.heroCards}>
               {loading ? (
                 <div className={styles.loading}>Loading cases...</div>
+              ) : error ? (
+                <div className={styles.error}>{error}</div>
+              ) : cases.length === 0 ? (
+                <div className={styles.empty}>No cases available</div>
               ) : (
                 cases.map((caseItem) => (
                   <div key={caseItem.case_id} className={styles.heroCardGroup}>

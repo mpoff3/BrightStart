@@ -4,34 +4,35 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from 'next/image';
 
 interface Persona {
-  persona_id: number;
-  started_case_id: number;
+  persona_id: string; // UUID
   name: string;
   role: string;
-  description: string;
-  avatar_url: string;
-  system_prompt: string;
-  created_at: string;
+  background: string;
+  personality: string;
+  expertise: string;
+  started_case_id: string; // UUID
+  is_human: boolean;
 }
 
 interface Message {
-  message_id: number;
-  started_case_id: number;
-  persona_id: number | null;
-  user_id: number | null;
+  message_id: string; // UUID
   content: string;
-  is_user_message: boolean;
-  sent_at: string;
-  read_at: string | null;
-  metadata: any;
+  persona_id: string | null; // UUID
+  awaiting_user_input: boolean;
+  is_human: boolean;
+  started_case_id: string; // UUID
+  metadata: string;
+  time_sent: string;
 }
 
 interface Case {
-  case_id: number;
+  case_id: string; // UUID
   title: string;
-  description: string;
-  // ... other case fields
+  content: string;
 }
+
+// Add constant for dummy started case ID
+const DUMMY_STARTED_CASE_ID = 'c82a3744-9412-4b69-9d60-cd4b83c3542f';
 
 export default function CasePage() {
   const params = useParams();
@@ -40,30 +41,55 @@ export default function CasePage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentInput, setCurrentInput] = useState('');
-  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
   const [caseData, setCaseData] = useState<Case | null>(null);
-  const [speakingPersonaId, setSpeakingPersonaId] = useState<number | null>(null);
+  const [speakingPersonaId, setSpeakingPersonaId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [lastMessageId, setLastMessageId] = useState<number>(0);
+  const [lastMessageId, setLastMessageId] = useState<string>('');
   const [messageQueue, setMessageQueue] = useState<Message[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const queueProcessorRef = useRef<NodeJS.Timeout | null>(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const isFirstLoad = useRef(true);
+  const [pageFullyLoaded, setPageFullyLoaded] = useState(false);
+  const pageLoadTime = useRef<Date>(new Date());
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  const [isHandRaised, setIsHandRaised] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [hasAudioPermission, setHasAudioPermission] = useState<boolean | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [userId] = useState<string>('1'); // Hardcode userId to '1' for testing
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        pageLoadTime.current = new Date();
+        console.log('Page load time set to:', pageLoadTime.current.toISOString());
+
+        // Fetch case data as normal
         const caseResponse = await fetch(`/api/cases/${params.id}`);
         const caseData = await caseResponse.json();
         setCaseData(caseData);
 
-        const personasResponse = await fetch(`/api/personas?started_case_id=${params.id}`);
+        // Use dummy started_case_id for personas and messages
+        const personasResponse = await fetch(`/api/personas?started_case_id=${DUMMY_STARTED_CASE_ID}`);
         const personasData = await personasResponse.json();
         setPersonas(personasData);
 
-        const messagesResponse = await fetch(`/api/messages?started_case_id=${params.id}`);
+        const messagesResponse = await fetch(`/api/messages?started_case_id=${DUMMY_STARTED_CASE_ID}`);
         const messagesData = await messagesResponse.json();
-        setMessages(messagesData);
+        
+        if (messagesData.length > 0) {
+          setMessages(messagesData);
+          setLastMessageId(messagesData[messagesData.length - 1].message_id);
+          console.log('Initial messages loaded, last ID:', messagesData[messagesData.length - 1].message_id);
+        }
+
+        setInitialLoadDone(true);
+        setPageFullyLoaded(true);
+        console.log('Page fully loaded');
+
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -72,10 +98,14 @@ export default function CasePage() {
     };
 
     fetchData();
+    
+    return () => {
+      setPageFullyLoaded(false);
+      setInitialLoadDone(false);
+    };
   }, [params.id]);
 
-  // Modified playTextToSpeech function to return a promise that resolves when audio finishes
-  const playTextToSpeech = async (text: string, personaId: number): Promise<void> => {
+  const playTextToSpeech = async (text: string, personaId: string): Promise<void> => {
     try {
       const response = await fetch('/api/text-to-speech', {
         method: 'POST',
@@ -115,95 +145,56 @@ export default function CasePage() {
     }
   };
 
-  // Modified fetchNewMessages to properly queue messages
-  const fetchNewMessages = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/messages?started_case_id=${params.id}&after_id=${lastMessageId}`);
-      const newMessages = await response.json();
-      
-      if (newMessages.length > 0) {
-        setMessages(prev => [...prev, ...newMessages]);
-        setLastMessageId(newMessages[newMessages.length - 1].message_id);
-        
-        // Add non-user messages to the queue in order
-        const nonUserMessages = newMessages.filter(msg => !msg.is_user_message);
-        if (nonUserMessages.length > 0) {
-          setMessageQueue(prev => [...prev, ...nonUserMessages]);
-        }
-      }
-    } catch (error) {
-      console.error('Error polling messages:', error);
+  const scrollToBottom = () => {
+    if (transcriptRef.current) {
+      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
-  }, [params.id, lastMessageId]);
+  };
 
-  // Modified queue processor
   useEffect(() => {
-    const processQueue = async () => {
-      if (messageQueue.length > 0 && !isPlaying) {
-        setIsPlaying(true);
-        const message = messageQueue[0];
-        
-        try {
-          await playTextToSpeech(message.content, message.persona_id);
-          setMessageQueue(prev => prev.slice(1)); // Remove the processed message
-        } catch (error) {
-          console.error('Error playing message:', error);
-        } finally {
-          setIsPlaying(false);
-        }
-      }
-    };
+    scrollToBottom();
+  }, [messages]);
 
-    // Clear any existing interval
-    if (queueProcessorRef.current) {
-      clearInterval(queueProcessorRef.current);
-    }
-
-    // Set up a new interval to check the queue regularly
-    queueProcessorRef.current = setInterval(processQueue, 500);
-
-    // Cleanup
-    return () => {
-      if (queueProcessorRef.current) {
-        clearInterval(queueProcessorRef.current);
-      }
-    };
-  }, [messageQueue, isPlaying]);
-
-  // Initial messages fetch
+  // Update message polling to use dummy started_case_id
   useEffect(() => {
-    const fetchInitialMessages = async () => {
+    if (!initialLoadDone) return;
+
+    const pollMessages = async () => {
       try {
-        const messagesResponse = await fetch(`/api/messages?started_case_id=${params.id}`);
-        const messagesData = await messagesResponse.json();
-        setMessages(messagesData);
+        const response = await fetch(`/api/messages?started_case_id=${DUMMY_STARTED_CASE_ID}&after_id=${lastMessageId}`);
+        const newMessages = await response.json();
         
-        // Set the last message ID if there are messages
-        if (messagesData.length > 0) {
-          setLastMessageId(messagesData[messagesData.length - 1].message_id);
+        if (newMessages.length > 0) {
+          const newNonUserMessages = newMessages.filter(msg => {
+            const messageTime = new Date(msg.time_sent);
+            const isAIMessage = !msg.is_human && msg.persona_id;
+            const isAfterPageLoad = messageTime > pageLoadTime.current;
+            
+            return isAIMessage && isAfterPageLoad;
+          });
+
+          setMessages(prev => [...prev, ...newMessages]);
+          setLastMessageId(newMessages[newMessages.length - 1].message_id);
+
+          // Rest of the polling logic remains the same...
         }
       } catch (error) {
-        console.error('Error fetching initial messages:', error);
+        console.error('Error polling messages:', error);
       }
     };
 
-    fetchInitialMessages();
-  }, [params.id]);
+    const interval = setInterval(pollMessages, 1000);
+    return () => clearInterval(interval);
+  }, [initialLoadDone, lastMessageId]);
 
-  // Set up polling with a longer interval
-  useEffect(() => {
-    const pollInterval = setInterval(fetchNewMessages, 3000); // Poll every 3 seconds
-    return () => clearInterval(pollInterval);
-  }, [fetchNewMessages]);
-
+  // Update handleSubmit to use dummy started_case_id
   const handleSubmit = async () => {
-    if (!currentInput.trim() || !selectedPersona) return;
+    if (!currentInput.trim()) return;
 
     const userMessage = {
-      started_case_id: parseInt(params.id as string),
-      persona_id: selectedPersona.persona_id,
+      started_case_id: DUMMY_STARTED_CASE_ID,
       content: currentInput,
-      is_user_message: true
+      is_human: true
     };
 
     try {
@@ -219,22 +210,115 @@ export default function CasePage() {
         throw new Error('Failed to send message');
       }
 
-      const result = await response.json();
-      
-      // Add the user message to the UI immediately
-      setMessages(prev => [...prev, result.userMessage]);
-      
-      // Clear the input
       setCurrentInput('');
-      
-      // The AI responses will be picked up by the polling mechanism
-      // and added to the message queue automatically
-      
     } catch (error) {
       console.error('Error sending message:', error);
-      // You might want to show an error message to the user here
     }
   };
+
+  const requestMicrophonePermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setHasAudioPermission(true);
+      return stream;
+    } catch (error) {
+      console.error('Microphone permission denied:', error);
+      setHasAudioPermission(false);
+      return null;
+    }
+  };
+
+  const startRecording = async () => {
+    const stream = await requestMicrophonePermission();
+    if (!stream) return;
+
+    streamRef.current = stream;
+    audioChunksRef.current = [];
+    const mediaRecorder = new MediaRecorder(stream);
+    
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunksRef.current.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      await handleAudioSubmission(audioBlob);
+      
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    };
+
+    mediaRecorderRef.current = mediaRecorder;
+    mediaRecorder.start();
+    setIsRecording(true);
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Update handleAudioSubmission to use dummy started_case_id
+  const handleAudioSubmission = async (audioBlob: Blob) => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+    formData.append('started_case_id', DUMMY_STARTED_CASE_ID);
+    formData.append('is_human', 'true');
+
+    try {
+      console.log('Sending audio for transcription...');
+      const response = await fetch('/api/speech-input', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const contentType = response.headers.get('content-type');
+      let result;
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        throw new Error('Received non-JSON response from server');
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to send audio message: ${result.error || response.statusText}`);
+      }
+
+      console.log('Transcription result:', result);
+    } catch (error) {
+      console.error('Error sending audio message:', error);
+      alert('Failed to process audio message. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    const checkMicrophonePermission = async () => {
+      try {
+        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        setHasAudioPermission(result.state === 'granted');
+      } catch (error) {
+        console.error('Error checking microphone permission:', error);
+        setHasAudioPermission(false);
+      }
+    };
+
+    checkMicrophonePermission();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -244,7 +328,6 @@ export default function CasePage() {
     );
   }
 
-  // Calculate grid columns based on number of personas
   const getGridCols = () => {
     const count = personas.length;
     if (count <= 4) return 2;
@@ -252,12 +335,16 @@ export default function CasePage() {
     return 4;
   };
 
+  const getPersonaName = (personaId: string | null, personas: Persona[]): string => {
+    if (!personaId) return 'AI';
+    const persona = personas.find(p => p.persona_id === personaId);
+    return persona ? persona.name : 'AI';
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-gray-900">
-      {/* Navigation bar with home button and title */}
       <nav className="h-16 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800">
         <div className="h-full px-4 flex items-center justify-between">
-          {/* Left side - Home button */}
           <button
             onClick={() => router.push('/')}
             className="bg-gray-800 text-gray-200 p-2 rounded-lg
@@ -283,23 +370,18 @@ export default function CasePage() {
             </span>
           </button>
 
-          {/* Center - Case Title */}
           <h1 className="text-white text-xl font-medium absolute left-1/2 transform -translate-x-1/2">
             {caseData?.title || 'Loading...'}
           </h1>
         </div>
       </nav>
 
-      {/* Main content */}
-      <div className="h-[calc(100vh-4rem)]"> {/* Subtract nav height */}
+      <div className="h-[calc(100vh-4rem)]">
         <div className="h-full flex">
-          {/* Main content area */}
           <div className={`h-full transition-all duration-300 ease-in-out ${
             showTranscript ? 'w-[calc(100%-400px)]' : 'w-full'
           }`}>
-            {/* Grid container with padding */}
             <div className="h-full p-4">
-              {/* Grid of personas */}
               <div 
                 className="grid gap-6 h-full"
                 style={{
@@ -311,13 +393,10 @@ export default function CasePage() {
                   <div 
                     key={persona.persona_id}
                     className={`relative bg-gray-800 rounded-lg overflow-hidden
-                      ${selectedPersona?.persona_id === persona.persona_id ? 'ring-2 ring-blue-500' : ''}
                       ${speakingPersonaId === persona.persona_id ? 'ring-2 ring-white' : ''}
                       transition-all duration-300 hover:ring-2 hover:ring-blue-400
                       flex flex-col items-center justify-center`}
-                    onClick={() => setSelectedPersona(persona)}
                   >
-                    {/* Circular avatar container */}
                     <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-700 mb-4">
                       <Image
                         src="/avatars/placeholder-avatar.png"
@@ -327,7 +406,6 @@ export default function CasePage() {
                         className="object-cover w-full h-full"
                       />
                     </div>
-                    {/* Text content */}
                     <div className="text-center">
                       <div className="text-white font-semibold text-lg">{persona.name}</div>
                       <div className="text-gray-300 text-sm">{persona.role}</div>
@@ -338,11 +416,9 @@ export default function CasePage() {
             </div>
           </div>
 
-          {/* Transcript panel */}
           <div className={`fixed right-0 top-16 h-[calc(100vh-4rem)] transform transition-transform duration-300 ease-in-out ${
             showTranscript ? 'translate-x-0' : 'translate-x-[400px]'
           }`}>
-            {/* Toggle transcript button */}
             <button
               onClick={() => setShowTranscript(!showTranscript)}
               className={`absolute left-0 bottom-8 bg-gray-800 text-gray-200 px-4 py-2 
@@ -352,28 +428,30 @@ export default function CasePage() {
               {showTranscript ? 'Hide Transcript' : 'Show Transcript'}
             </button>
 
-            {/* Transcript panel content */}
             <div className="bg-gray-900 w-[400px] h-full flex flex-col rounded-l-lg shadow-xl border-l border-gray-800">
               <div className="p-4 border-b border-gray-800 bg-gray-900/90 backdrop-blur-sm">
                 <h2 className="text-xl font-semibold text-gray-200">Transcript</h2>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div 
+                ref={transcriptRef}
+                className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth"
+              >
                 {messages && messages.length > 0 ? (
-                  messages.map((message, index) => (
+                  messages.map((message) => (
                     <div
-                      key={`message-${message.message_id || `temp-${index}`}-${message.sent_at}`}
-                      className={`mb-4 ${message.is_user_message ? 'text-right' : 'text-left'}`}
+                      key={`msg-${message.message_id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`}
+                      className={`mb-4 ${message.is_human ? 'text-right' : 'text-left'}`}
                     >
                       <div className={`inline-block p-3 rounded-lg max-w-[80%] ${
-                        message.is_user_message
+                        message.is_human
                           ? 'bg-blue-600 text-gray-100'
                           : 'bg-gray-800 text-gray-100'
                       }`}>
                         <div className="text-sm text-gray-400 mb-1">
-                          {message.is_user_message ? 'You' : selectedPersona?.name || 'AI'}
+                          {message.is_human ? 'You' : getPersonaName(message.persona_id, personas)}
                         </div>
-                        <div className="text-sm">
+                        <div className="text-sm whitespace-pre-wrap break-words">
                           {message.content}
                         </div>
                       </div>
@@ -392,34 +470,73 @@ export default function CasePage() {
                     className="w-full p-3 bg-gray-800 text-gray-100 rounded-lg resize-none h-20
                       border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500
                       placeholder-gray-500 transition-colors"
-                    placeholder={selectedPersona 
-                      ? `Ask ${selectedPersona.name} a question...` 
-                      : "Type your message..."}
+                    placeholder="Type your message..."
                   />
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm text-gray-500">
-                      {selectedPersona ? `Speaking to: ${selectedPersona.name}` : 'Select a persona'}
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      {hasAudioPermission === false && (
+                        <div className="text-red-500 text-sm flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <span>Microphone access needed</span>
+                          <button
+                            onClick={requestMicrophonePermission}
+                            className="text-blue-500 hover:text-blue-400 underline"
+                          >
+                            Enable
+                          </button>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setIsHandRaised(!isHandRaised)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isHandRaised 
+                            ? 'bg-yellow-500 text-gray-900' 
+                            : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                        }`}
+                        title="Raise Hand"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                            d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={isHandRaised ? (isRecording ? stopRecording : startRecording) : undefined}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isRecording 
+                            ? 'bg-red-500 text-white animate-pulse'
+                            : isHandRaised
+                              ? 'bg-green-500 text-white hover:bg-green-600'
+                              : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                        }`}
+                        title={isHandRaised ? (isRecording ? "Stop Recording" : "Start Recording") : "Raise hand to record"}
+                        disabled={!isHandRaised}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {isRecording ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                          ) : (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                          )}
+                        </svg>
+                      </button>
                     </div>
                     <button
                       onClick={handleSubmit}
                       className="px-4 py-2 bg-blue-600 text-gray-100 rounded-lg 
                         hover:bg-blue-700 transition-colors disabled:opacity-50
                         disabled:cursor-not-allowed flex items-center gap-2"
-                      disabled={!currentInput.trim() || !selectedPersona}
+                      disabled={!currentInput.trim()}
                     >
                       <span>Send</span>
-                      <svg 
-                        className="w-4 h-4" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
-                        />
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                       </svg>
                     </button>
                   </div>
@@ -430,7 +547,6 @@ export default function CasePage() {
         </div>
       </div>
 
-      {/* Add audio element */}
       <audio ref={audioRef} className="hidden" />
     </div>
   );
