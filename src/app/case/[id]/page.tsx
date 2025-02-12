@@ -2,6 +2,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from 'next/image';
+import InputRequestNotification from '@/components/InputRequestNotification';
 
 interface Persona {
   persona_id: string; // UUID
@@ -12,6 +13,7 @@ interface Persona {
   expertise: string;
   started_case_id: string; // UUID
   is_human: boolean;
+  voice: string; // Add voice field
 }
 
 interface Message {
@@ -32,7 +34,7 @@ interface Case {
 }
 
 // Add constant for dummy started case ID
-const DUMMY_STARTED_CASE_ID = 'c82a3744-9412-4b69-9d60-cd4b83c3542f';
+const DUMMY_STARTED_CASE_ID = 'c592f770-d69c-4366-bcd5-0a1037153f51';
 
 export default function CasePage() {
   const params = useParams();
@@ -60,6 +62,7 @@ export default function CasePage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const [userId] = useState<string>('1'); // Hardcode userId to '1' for testing
+  const [awaitingInput, setAwaitingInput] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,12 +110,16 @@ export default function CasePage() {
 
   const playTextToSpeech = async (text: string, personaId: string): Promise<void> => {
     try {
+      // Get voice from persona object directly
+      const persona = personas.find(p => p.persona_id === personaId);
+      const voice = persona?.voice || 'aura-asteria-en'; // Default voice if not found
+
       const response = await fetch('/api/text-to-speech', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, voice }), // Send voice instead of personaId
       });
 
       if (!response.ok) throw new Error('Text-to-speech request failed');
@@ -155,7 +162,7 @@ export default function CasePage() {
     scrollToBottom();
   }, [messages]);
 
-  // Update message polling to use dummy started_case_id
+  // Update message polling to use dummy started_case_id and handle TTS
   useEffect(() => {
     if (!initialLoadDone) return;
 
@@ -173,10 +180,18 @@ export default function CasePage() {
             return isAIMessage && isAfterPageLoad;
           });
 
+          // Check if any new message is awaiting user input
+          const hasAwaitingInput = newMessages.some(msg => msg.awaiting_user_input);
+          setAwaitingInput(hasAwaitingInput);
+
           setMessages(prev => [...prev, ...newMessages]);
           setLastMessageId(newMessages[newMessages.length - 1].message_id);
 
-          // Rest of the polling logic remains the same...
+          // Add AI messages to TTS queue
+          if (newNonUserMessages.length > 0) {
+            console.log('Adding to TTS queue:', newNonUserMessages);
+            setMessageQueue(prev => [...prev, ...newNonUserMessages]);
+          }
         }
       } catch (error) {
         console.error('Error polling messages:', error);
@@ -186,6 +201,29 @@ export default function CasePage() {
     const interval = setInterval(pollMessages, 1000);
     return () => clearInterval(interval);
   }, [initialLoadDone, lastMessageId]);
+
+  // Add TTS queue processing
+  useEffect(() => {
+    const processQueue = async () => {
+      if (messageQueue.length > 0 && !isPlaying) {
+        console.log('Processing message from queue:', messageQueue[0]);
+        setIsPlaying(true);
+        const message = messageQueue[0];
+        
+        try {
+          await playTextToSpeech(message.content, message.persona_id);
+          setMessageQueue(prev => prev.slice(1));
+        } catch (error) {
+          console.error('Error playing message:', error);
+        } finally {
+          setIsPlaying(false);
+        }
+      }
+    };
+
+    const queueInterval = setInterval(processQueue, 500);
+    return () => clearInterval(queueInterval);
+  }, [messageQueue, isPlaying]);
 
   // Update handleSubmit to use dummy started_case_id
   const handleSubmit = async () => {
@@ -546,6 +584,36 @@ export default function CasePage() {
           </div>
         </div>
       </div>
+
+      <InputRequestNotification
+        isVisible={awaitingInput}
+        isQueueEmpty={messageQueue.length === 0}
+        onRecordingStart={() => {
+          // Optional: Add any logic needed when recording starts
+        }}
+        onRecordingStop={async (audioBlob) => {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+          formData.append('started_case_id', DUMMY_STARTED_CASE_ID);
+          formData.append('is_human', 'true');
+
+          try {
+            const response = await fetch('/api/speech-input', {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to send audio message');
+            }
+
+            setAwaitingInput(false);
+          } catch (error) {
+            console.error('Error sending audio message:', error);
+            alert('Failed to send audio message. Please try again.');
+          }
+        }}
+      />
 
       <audio ref={audioRef} className="hidden" />
     </div>
