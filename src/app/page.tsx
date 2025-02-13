@@ -1,14 +1,15 @@
 "use client";
 import { useRouter } from "next/navigation";
-import styles from './page.module.css';
-import { useEffect, useState } from 'react';
+import { v4 as uuidv4 } from "uuid";
+
+import styles from "./page.module.css";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import axios from 'axios';
+import axios from "axios";
 interface UserProfile {
   experiences: string;
   skills: string;
   summary: string;
-  
 }
 
 interface Case {
@@ -39,16 +40,18 @@ export default function Home() {
   useEffect(() => {
     const fetchCases = async () => {
       try {
-        const response = await fetch('/api/cases');
+        const response = await fetch("/api/cases");
         if (!response.ok) {
-          throw new Error('Failed to fetch cases');
+          throw new Error("Failed to fetch cases");
         }
         const data = await response.json();
         // Ensure we're setting an array
         setCases(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error('Error fetching cases:', error);
-        setError(error instanceof Error ? error.message : 'Failed to fetch cases');
+        console.error("Error fetching cases:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to fetch cases"
+        );
         setCases([]); // Set empty array on error
       } finally {
         setLoading(false);
@@ -64,74 +67,68 @@ export default function Home() {
 
     setIsProcessingCV(true);
     const formData = new FormData();
-    formData.append('cv', file);
+    formData.append("cv", file);
 
     try {
-      const response = await fetch('/api/process-cv', {
-        method: 'POST',
+      const response = await fetch("/api/process-cv", {
+        method: "POST",
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Failed to process CV');
-      
+      if (!response.ok) throw new Error("Failed to process CV");
+
       const profile = await response.json();
       setUserProfile(profile);
       // Store the profile in localStorage for persistence
-      localStorage.setItem('userProfile', JSON.stringify(profile));
+      localStorage.setItem("userProfile", JSON.stringify(profile));
     } catch (error) {
-      console.error('Error processing CV:', error);
-      setError('Failed to process CV');
+      console.error("Error processing CV:", error);
+      setError("Failed to process CV");
     } finally {
       setIsProcessingCV(false);
     }
   };
 
   const handleCaseSelection = async (caseId: number) => {
+    const startup_case_id = uuidv4();
+
     if (!userProfile) {
-      alert('Please upload your CV first');
+      alert("Please upload your CV first");
       return;
     }
 
     try {
-      console.log(userProfile);
-      console.log(caseId);
       // Call FastAPI endpoint to initialize case
-      const axios = require('axios');
-      const response = await axios.post('http://localhost:8000/start-discussion', {
-        case_content: "This is a sample case content",
-        user_profile: JSON.stringify(userProfile),
-        case_id: caseId
-      });
-      console.log(response);
-      if (!response.ok) {
-        const errorDetails = await response.json();
-        console.error('Error details:', errorDetails);
-        throw new Error('Failed to initialize case');
-      }
-
-      const { started_case_id, persona_id } = await response.json();
-      
-      // Store IDs in localStorage
-      localStorage.setItem('startedCaseId', started_case_id);
-      localStorage.setItem('userPersonaId', persona_id);
-
-      // Navigate to case page
-      router.push(`/case/${caseId}`);
+      axios
+        .post("http://localhost:8000/start-discussion", {
+          case_content: "This is a sample case content",
+          user_profile: JSON.stringify(userProfile),
+          case_id: caseId,
+          startup_case_id: startup_case_id,
+        })
+        .then((response) => {
+          console.log(response.data);
+        })
+        .catch((error) => {
+          console.error("Error details:", error);
+        });
+      localStorage.setItem("startedCaseId", startup_case_id);
+      router.push(`/case/${startup_case_id}`);
     } catch (error) {
-      console.error('Error initializing case:', error);
-      setError('Failed to initialize case');
+      console.error("Error initializing case:", error);
+      setError("Failed to initialize case");
     }
-  };      
+  };
 
   return (
     <div className={styles.container}>
       {/* Navigation */}
       <nav className={styles.nav}>
-        <div className={styles.logo}>
-          CaseAI
-        </div>
+        <div className={styles.logo}>CaseAI</div>
         <div className={styles.navRight}>
-        <Link href="/test" className={styles.testLink}>Test API</Link>
+          <Link href="/test" className={styles.testLink}>
+            Test API
+          </Link>
           <a href="#account">Account</a>
         </div>
       </nav>
@@ -141,7 +138,7 @@ export default function Home() {
         <div className={styles.heroContent}>
           <h1>AI-Driven Case Discussions</h1>
           <h2>Experience Harvard's Case Method Today</h2>
-          
+
           <div className={styles.cvUpload}>
             {!userProfile ? (
               <div className={styles.uploadSection}>
@@ -176,17 +173,23 @@ export default function Home() {
                   <div key={caseItem.case_id} className={styles.heroCardGroup}>
                     <div
                       onClick={() => handleCaseSelection(caseItem.case_id)}
-                      className={`${styles.heroCard} ${!userProfile ? styles.disabled : ''}`}
+                      className={`${styles.heroCard} ${
+                        !userProfile ? styles.disabled : ""
+                      }`}
                     >
-                      <div 
+                      <div
                         className={styles.heroCardImage}
-                        style={{ 
-                          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7))` 
+                        style={{
+                          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7))`,
                         }}
                       />
                       <div className={styles.heroCardContent}>
-                        <h3 className={styles.heroCardTitle}>{caseItem.title}</h3>
-                        <p className={styles.heroCardDescription}>{caseItem.description}</p>
+                        <h3 className={styles.heroCardTitle}>
+                          {caseItem.title}
+                        </h3>
+                        <p className={styles.heroCardDescription}>
+                          {caseItem.description}
+                        </p>
                       </div>
                     </div>
                   </div>

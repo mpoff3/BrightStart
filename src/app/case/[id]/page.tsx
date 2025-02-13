@@ -84,13 +84,13 @@ export default function CasePage() {
 
         // Use dummy started_case_id for personas and messages
         const personasResponse = await fetch(
-          `/api/personas?started_case_id=${DUMMY_STARTED_CASE_ID}`
+          `/api/personas?started_case_id=${params.id}`
         );
         const personasData = await personasResponse.json();
         setPersonas(personasData);
 
         const messagesResponse = await fetch(
-          `/api/messages?started_case_id=${DUMMY_STARTED_CASE_ID}`
+          `/api/messages?started_case_id=${params.id}`
         );
         const messagesData = await messagesResponse.json();
 
