@@ -4,6 +4,13 @@ import styles from './page.module.css';
 import { useEffect, useState } from 'react';
 import Link from "next/link";
 
+interface UserProfile {
+  experiences: string;
+  skills: string;
+  summary: string;
+  
+}
+
 interface Case {
   case_id: number;
   title: string;
@@ -26,6 +33,8 @@ export default function Home() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isProcessingCV, setIsProcessingCV] = useState(false);
 
   useEffect(() => {
     const fetchCases = async () => {
@@ -49,6 +58,69 @@ export default function Home() {
     fetchCases();
   }, []);
 
+  const handleCVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingCV(true);
+    const formData = new FormData();
+    formData.append('cv', file);
+
+    try {
+      const response = await fetch('/api/process-cv', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Failed to process CV');
+      
+      const profile = await response.json();
+      setUserProfile(profile);
+      // Store the profile in localStorage for persistence
+      localStorage.setItem('userProfile', JSON.stringify(profile));
+    } catch (error) {
+      console.error('Error processing CV:', error);
+      setError('Failed to process CV');
+    } finally {
+      setIsProcessingCV(false);
+    }
+  };
+
+  const handleCaseSelection = async (caseId: number) => {
+    if (!userProfile) {
+      alert('Please upload your CV first');
+      return;
+    }
+
+    try {
+      // Call FastAPI endpoint to initialize case
+      const response = await fetch('http://localhost:8000/start-discussion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          case_id: caseId,
+          user_profile: userProfile,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to initialize case');
+
+      const { started_case_id, persona_id } = await response.json();
+      
+      // Store IDs in localStorage
+      localStorage.setItem('startedCaseId', started_case_id);
+      localStorage.setItem('userPersonaId', persona_id);
+
+      // Navigate to case page
+      router.push(`/case/${caseId}`);
+    } catch (error) {
+      console.error('Error initializing case:', error);
+      setError('Failed to initialize case');
+    }
+  };
+
   return (
     <div className={styles.container}>
       {/* Navigation */}
@@ -68,6 +140,27 @@ export default function Home() {
           <h1>AI-Driven Case Discussions</h1>
           <h2>Experience Harvard's Case Method Today</h2>
           
+          <div className={styles.cvUpload}>
+            {!userProfile ? (
+              <div className={styles.uploadSection}>
+                <h3>Upload your CV to get started</h3>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleCVUpload}
+                  disabled={isProcessingCV}
+                  className={styles.fileInput}
+                />
+                {isProcessingCV && <div>Processing CV...</div>}
+              </div>
+            ) : (
+              <div className={styles.profileComplete}>
+                <h3>Profile Ready</h3>
+                <p>You can now access cases</p>
+              </div>
+            )}
+          </div>
+
           <div className={styles.heroCardsSection}>
             <div className={styles.heroCards}>
               {loading ? (
@@ -80,8 +173,8 @@ export default function Home() {
                 cases.map((caseItem) => (
                   <div key={caseItem.case_id} className={styles.heroCardGroup}>
                     <div
-                      onClick={() => router.push(`/case/${caseItem.case_id}`)}
-                      className={styles.heroCard}
+                      onClick={() => handleCaseSelection(caseItem.case_id)}
+                      className={`${styles.heroCard} ${!userProfile ? styles.disabled : ''}`}
                     >
                       <div 
                         className={styles.heroCardImage}

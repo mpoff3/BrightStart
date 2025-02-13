@@ -352,4 +352,36 @@
 
 .testLink:hover {
   background-color: #e5e7eb;
+}
+
+.cvUpload {
+  margin: 2rem 0;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  backdrop-filter: blur(10px);
+}
+
+.uploadSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.fileInput {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.profileComplete {
+  text-align: center;
+  color: #4ade80;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 } 

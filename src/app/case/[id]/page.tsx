@@ -172,7 +172,7 @@ export default function CasePage() {
         const newMessages = await response.json();
         
         if (newMessages.length > 0) {
-          const newNonUserMessages = newMessages.filter(msg => {
+          const newNonUserMessages = newMessages.filter((msg: Message) => {
             const messageTime = new Date(msg.time_sent);
             const isAIMessage = !msg.is_human && msg.persona_id;
             const isAfterPageLoad = messageTime > pageLoadTime.current;
@@ -181,7 +181,7 @@ export default function CasePage() {
           });
 
           // Check if any new message is awaiting user input
-          const hasAwaitingInput = newMessages.some(msg => msg.awaiting_user_input);
+          const hasAwaitingInput = newMessages.some((msg: Message) => msg.awaiting_user_input);
           setAwaitingInput(hasAwaitingInput);
 
           setMessages(prev => [...prev, ...newMessages]);
@@ -211,7 +211,7 @@ export default function CasePage() {
         const message = messageQueue[0];
         
         try {
-          await playTextToSpeech(message.content, message.persona_id);
+          await playTextToSpeech(message.content, message.persona_id || '');
           setMessageQueue(prev => prev.slice(1));
         } catch (error) {
           console.error('Error playing message:', error);
