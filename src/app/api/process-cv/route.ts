@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 
 const STATIC_ANALYSIS = {
+
+  human_participant: {
+    name: "Jordan", 
+    background: "Research Scientist at DeepMind with experience in AI/ML products",
+    expertise: "Research in AI/ML products",
+    personality: "Technical and Strategic thinker with customer focus",
+    is_human: "True",
+    role: "Research Scientist"
+  },
   summary: {
     keyTechnicalStrengths: [
       "Strong foundation in Machine Learning and AI through MIT and TU Berlin coursework",
@@ -65,6 +74,7 @@ export async function POST(request: Request) {
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
       },
+
     });
   } catch (error) {
     console.error('Error processing CV:', error);
