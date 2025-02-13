@@ -1,17 +1,13 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { getClient } from '@/lib/db';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
 
 export async function GET() {
-  let client;
+    const client = await getClient();
+
   try {
-    client = await pool.connect();
+
+
     
     // Simple query to check database connection and schema
     const result = await client.query(`

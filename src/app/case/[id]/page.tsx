@@ -79,6 +79,7 @@ export default function CasePage() {
 
         // Fetch case data as normal
         const caseResponse = await fetch(`/api/cases/${params.id}`);
+        console.log("Case response:", caseResponse);
         const caseData = await caseResponse.json();
         setCaseData(caseData);
 
@@ -87,6 +88,8 @@ export default function CasePage() {
           `/api/personas?started_case_id=${params.id}`
         );
         const personasData = await personasResponse.json();
+
+        console.log("Initial personas loaded:", personasData);
         setPersonas(personasData);
 
         const messagesResponse = await fetch(

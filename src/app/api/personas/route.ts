@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+import { getClient } from '@/lib/db';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,9 +12,10 @@ export async function GET(request: Request) {
     );
   }
 
-  let client;
+
+    const client = await getClient();
+
   try {
-    client = await pool.connect();
     const result = await client.query(
       `SELECT * FROM personas 
        WHERE started_case_id = $1 

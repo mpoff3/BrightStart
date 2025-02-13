@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { getClient } from '@/lib/db';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false // Required for Supabase connection
-  }
-});
 
 export async function GET() {
-  let client;
   try {
-    client = await pool.connect();
+
+    const client = await getClient();
     const result = await client.query('SELECT * FROM cases ORDER BY title ASC');
     
     // Transform the data to match the frontend's expected format
@@ -34,7 +28,5 @@ export async function GET() {
       { error: 'Failed to fetch cases' },
       { status: 500 }
     );
-  } finally {
-    if (client) client.release();
-  }
+  } 
 } 

@@ -1,22 +1,26 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+// import { Pool } from 'pg';
+
+
+import { getClient } from '@/lib/db';
+
 
 // Create a single pool instance that's reused across requests
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 20, // Limit maximum connections
-  idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
-  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+// const pool = new Pool({
+//   connectionString: process.env.DATABASE_URL,
+//   max: 20, // Limit maximum connections
+//   idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
+//   connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
+//   ssl: {
+//     rejectUnauthorized: false
+//   }
+// });
 
 // Handle pool errors
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
+// pool.on('error', (err) => {
+//   console.error('Unexpected error on idle client', err);
+//   process.exit(-1);
+// });
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -39,10 +43,9 @@ export async function GET(request: Request) {
     );
   }
 
-  let client;
+
+  const client = await getClient();
   try {
-    // Get a client from the pool
-    client = await pool.connect();
 
     let query = `
       SELECT * FROM messages 
@@ -72,7 +75,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  let client;
+
+  const client = await getClient();
   try {
     const body = await request.json();
     const { started_case_id, content, is_human } = body;
@@ -92,8 +96,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    client = await pool.connect();
 
     const result = await client.query(
       `INSERT INTO messages 

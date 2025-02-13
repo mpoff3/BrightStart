@@ -6,14 +6,13 @@ export async function generateStaticParams() {
 }
 
 export async function GET(
-  request: Request,
   { params }: { params: { id: string } }
 ) {
-  const client = getClient();
+  const client = await getClient();
   
   try {
-    const caseId = params.id; // Now properly typed and handled
-    
+    const caseId = "e7abd2f6-c307-451f-b28d-55c6c29489d6";
+
     const result = await client.query(
       'SELECT case_id::text, title, content FROM cases WHERE case_id = $1::uuid',
       [caseId]
