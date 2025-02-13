@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import styles from './page.module.css';
 import { useEffect, useState } from 'react';
 import Link from "next/link";
-
+import axios from 'axios';
 interface UserProfile {
   experiences: string;
   skills: string;
@@ -93,19 +93,21 @@ export default function Home() {
     }
 
     try {
+      console.log(userProfile);
+      console.log(caseId);
       // Call FastAPI endpoint to initialize case
-      const response = await fetch('http://localhost:8000/start-discussion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          case_id: caseId,
-          user_profile: userProfile,
-        }),
+      const axios = require('axios');
+      const response = await axios.post('http://localhost:8000/start-discussion', {
+        case_content: "This is a sample case content",
+        user_profile: JSON.stringify(userProfile),
+        case_id: caseId
       });
-
-      if (!response.ok) throw new Error('Failed to initialize case');
+      console.log(response);
+      if (!response.ok) {
+        const errorDetails = await response.json();
+        console.error('Error details:', errorDetails);
+        throw new Error('Failed to initialize case');
+      }
 
       const { started_case_id, persona_id } = await response.json();
       
@@ -119,7 +121,7 @@ export default function Home() {
       console.error('Error initializing case:', error);
       setError('Failed to initialize case');
     }
-  };
+  };      
 
   return (
     <div className={styles.container}>
